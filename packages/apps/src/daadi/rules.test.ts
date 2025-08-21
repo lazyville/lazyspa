@@ -80,7 +80,14 @@ describe('rules helpers', () => {
   it('identifies win after reducing opponent to 2', () => {
     const b = Array(24).fill(0);
     b[0]=b[14]=-1;
-    assert.strictEqual(checkWin(b,1,'moving',VARIANTS.nine,'nine',true), 1);
+    assert.strictEqual(checkWin(b,-1,'moving',VARIANTS.nine,'nine',true), 1);
+  });
+
+  it('flags loss for player with only two pieces', () => {
+    const b = Array(24).fill(0);
+    b[0]=b[14]=1;
+    b[3]=b[4]=b[5]=-1;
+    assert.strictEqual(checkWin(b,1,'moving',VARIANTS.nine,'nine',true), -1);
   });
 
   it('detects immediate win after removal', () => {
@@ -88,6 +95,12 @@ describe('rules helpers', () => {
     b[0]=b[14]=-1;
     assert.strictEqual(winnerAfterRemoval(b,1,'nine','moving'), 1);
     assert.strictEqual(winnerAfterRemoval(b,1,'nine','placing'), 0);
+  });
+
+  it('detects immediate win after removal in three-men variant', () => {
+    const b = Array(9).fill(0);
+    b[0]=b[1]=-1;
+    assert.strictEqual(winnerAfterRemoval(b,1,'three','moving'), 1);
   });
 
   it('detects no legal moves', () => {
