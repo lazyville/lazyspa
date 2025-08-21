@@ -168,8 +168,8 @@ export default function Gameplay(){
 
       <div className="flex-1 w-full flex flex-col md:flex-row items-start gap-6 p-4 md:p-6 lg:p-8">
         <div className="flex-1 flex items-center justify-center">
-          <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow p-2 sm:p-4 md:p-6">
-            <svg viewBox={`0 0 ${off*2+6*sx} ${off*2+6*sx}`} className="w-full h-auto text-zinc-700 dark:text-zinc-300 touch-manipulation select-none">
+          <div className="w-full max-w-3xl aspect-square bg-white dark:bg-zinc-800 rounded-2xl shadow p-2 sm:p-4 md:p-6">
+            <svg viewBox={`0 0 ${off*2+6*sx} ${off*2+6*sx}`} className="w-full h-full text-zinc-700 dark:text-zinc-300 touch-manipulation select-none">
               <g>{VARIANTS[vk].drawLines(sx,off)}</g>
               {VARIANTS[vk].points.map((p,i)=>{const {cx,cy}=toXY(p);const o=board[i];const seld=sel===i;const lastHit=last&&(last.from===i||last.to===i);const canGo=sel!==null&&legal(sel,turn).includes(i);const canPlaceHere=phase==='placing'&&board[i]===0&&mustRem===null&&(turn===1||!cpu)&&canPlace(toPlace,turn)&&!dbg;const canRem=mustRem!==null&&remSet.has(i)&&board[i]===(mustRem===1?-1:1);const inM=o===1?mill1.has(i):o===-1?mill2.has(i):false;return (
                 <g key={i} onClick={()=>click(i)} className={cpu&&turn===-1?"cursor-not-allowed":"cursor-pointer"}>
