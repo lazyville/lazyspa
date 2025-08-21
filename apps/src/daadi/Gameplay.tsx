@@ -1,50 +1,22 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { VARIANTS, K, P, Phase } from "./variants";
+import { inMill, collectMill, removables, canPlace, enterMoving, winnerAfterRemoval, destinationsFor, checkWin } from "./rules";
 
-type K = "nine" | "three"; type P = 1 | -1; type Phase = "placing" | "moving" | "removing";
+const nt=(t:P)=>t===1?-1:1;
 
-// ---------- Boards ----------
-const VNINE = { key: "nine" as K,
-  points: [[0,0],[3,0],[6,0],[1,1],[3,1],[5,1],[2,2],[3,2],[4,2],[0,3],[1,3],[2,3],[4,3],[5,3],[6,3],[2,4],[3,4],[4,4],[1,5],[3,5],[5,5],[0,6],[3,6],[6,6]] as [number,number][],
-  adj: [[1,9],[0,2,4],[1,14],[4,10],[1,3,5,7],[4,13],[7,11],[4,6,8,16],[7,12],[0,10,21],[3,9,11],[6,10,15],[8,13,17],[5,12,14],[2,13,23],[11,16],[7,15,17,19],[12,16],[19,10],[16,18,20,22],[19,13],[9,22],[19,21,23],[14,22]],
-  mills: [[0,1,2],[3,4,5],[6,7,8],[9,10,11],[12,13,14],[15,16,17],[18,19,20],[21,22,23],[0,9,21],[3,10,18],[6,11,15],[1,4,7],[16,19,22],[8,12,17],[5,13,20],[2,14,23]],
-  drawLines:(sx:number,o:number)=>{const L:JSX.Element[]=[];const ln=(a:number,b:number,c:number,d:number,k:string)=>(<line key={k} x1={o+a*sx} y1={o+b*sx} x2={o+c*sx} y2={o+d*sx} stroke="currentColor" strokeWidth={2}/>);[[0,0,6,0],[6,0,6,6],[6,6,0,6],[0,6,0,0]].forEach((v,i)=>L.push(ln(v[0],v[1],v[2],v[3],"o"+i)));[[1,1,5,1],[5,1,5,5],[5,5,1,5],[1,5,1,1]].forEach((v,i)=>L.push(ln(v[0],v[1],v[2],v[3],"m"+i)));[[2,2,4,2],[4,2,4,4],[4,4,2,4],[2,4,2,2]].forEach((v,i)=>L.push(ln(v[0],v[1],v[2],v[3],"i"+i)));[[3,0,3,2],[3,4,3,6],[0,3,2,3],[4,3,6,3]].forEach((v,i)=>L.push(ln(v[0],v[1],v[2],v[3],"c"+i)));return L;},
-  initialPieces:9, allowFlyingDefault:true };
-
-const VTHREE = { key: "three" as K,
-  points: [[0,0],[3,0],[6,0],[0,3],[3,3],[6,3],[0,6],[3,6],[6,6]] as [number,number][],
-  adj: [[1,3],[0,2,4],[1,5],[0,4,6],[1,3,5,7],[2,4,8],[3,7],[4,6,8],[5,7]],
-  mills: [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8]],
-  drawLines:(sx:number,o:number)=>{const L:JSX.Element[]=[];const ln=(a:number,b:number,c:number,d:number,k:string)=>(<line key={k} x1={o+a*sx} y1={o+b*sx} x2={o+c*sx} y2={o+d*sx} stroke="currentColor" strokeWidth={2}/>);[[0,0,6,0],[6,0,6,6],[6,6,0,6],[0,6,0,0],[0,3,6,3],[3,0,3,6]].forEach((v,i)=>L.push(ln(v[0],v[1],v[2],v[3],"t"+i)));return L;},
-  initialPieces:3, allowFlyingDefault:false };
-
-export const VARIANTS:Record<K,any>={nine:VNINE,three:VTHREE};
-
-const nt=(t:P)=>t===1?-1:1; 
-const inMill=(b:number[],i:number,p:P,m:number[][])=>m.some(x=>x.includes(i)&&x.every(j=>b[j]===p));
-const collectMill=(b:number[],p:P,m:number[][])=>{const s=new Set<number>();for(const x of m)if(x.every(i=>b[i]===p))x.forEach(i=>s.add(i));return s;};
-const removables=(b:number[],rem:P,m:number[][])=>{const vic=rem===1?-1:1;const S=collectMill(b,vic,m);const tot=b.filter(v=>v===vic).length;const R=new Set<number>();b.forEach((v,i)=>{if(v===vic)if(!S.has(i)||S.size===tot)R.add(i)});return R};
-const canPlace=(tp:{p1:number;p2:number},p:P)=>p===1?tp.p1>0:tp.p2>0; 
-const enterMoving=(tp:{p1:number;p2:number},mr:P|null)=>tp.p1===0&&tp.p2===0&&mr===null;
-const winnerAfterRemoval=(b:number[],rem:P,variant:K,ph:Phase)=> (ph!=="placing"&&variant==="nine"&&b.filter(v=>v===(rem===1?-1:1)).length<=2?rem:0) as P|0;
-const destinationsFor=(b:number[],variant:any,idx:number,p:P,vk:K,flying:boolean):number[]=>{
-  const cnt=b.filter(v=>v===p).length;
-  const canFly=flying && vk==='nine' && cnt===3;
-  return canFly ? b.map((v,i)=>v===0?i:-1).filter(i=>i!==-1) : variant.adj[idx].filter((n:number)=>b[n]===0);
-};
-
-export const runTests=()=>{const V=VNINE;const r: {name:string;pass:boolean}[]=[];let b:number[];
+export const runTests=()=>{const V=VARIANTS.nine;const r: {name:string;pass:boolean}[]=[];let b:number[];
 b=Array(24).fill(0);b[0]=b[1]=b[2]=1;r.push({name:"mill h [0,1,2]",pass:inMill(b,1,1 as P,V.mills)});
 b=Array(24).fill(0);b[0]=b[1]=b[2]=-1;b[3]=-1;b[9]=1;const R=removables(b,1 as P,V.mills);r.push({name:"removable prefers non-mill",pass:R.has(3)&&!R.has(0)});
-b=Array(24).fill(0);b[0]=b[14]= -1;r.push({name:"no win on placing ≤2",pass:winnerAfterRemoval(b,1 as P,"nine","placing")===0});
-b=Array(24).fill(0);b[0]=b[14]=-1;r.push({name:"win on moving ≤2",pass:winnerAfterRemoval(b,1 as P,"nine","moving")===1});
-r.push({name:"CPU no fly when >3", pass:(()=>{const b2=Array(24).fill(0); b2[22]=-1; b2[0]=-1; b2[2]=-1; b2[14]=-1; 
-  const adjSet=new Set(VNINE.adj[22].filter((n:number)=>b2[n]===0));
-  const d=destinationsFor(b2,VNINE,22,-1 as P,'nine' as K,true);
+b=Array(24).fill(0);b[0]=b[14]= -1;r.push({name:"no win on placing ≤2",pass:winnerAfterRemoval(b,1 as P,'nine','placing')===0});
+b=Array(24).fill(0);b[0]=b[14]=-1;r.push({name:"win on moving ≤2",pass:winnerAfterRemoval(b,1 as P,'nine','moving')===1});
+r.push({name:"CPU no fly when >3", pass:(()=>{const b2=Array(24).fill(0); b2[22]=-1; b2[0]=-1; b2[2]=-1; b2[14]=-1;
+  const adjSet=new Set(V.adj[22].filter((n:number)=>b2[n]===0));
+  const d=destinationsFor(b2,V,22,-1 as P,'nine',true);
   return d.every(i=>adjSet.has(i)) && d.length===adjSet.size;})()});
 return r;}
 
-export default function DaadiGame(){
+export default function Gameplay(){
   const [vk,setVk]=useState<K>("nine"); const V=useMemo(()=>VARIANTS[vk],[vk]);
   const [board,setBoard]=useState<number[]>(()=>Array(V.points.length).fill(0));
   const [turn,setTurn]=useState<P>(1); const [phase,setPhase]=useState<Phase>("placing");
@@ -63,15 +35,14 @@ export default function DaadiGame(){
   const counts=useMemo(()=>{let p1=0,p2=0;board.forEach(v=>{if(v===1)p1++;else if(v===-1)p2++});return {p1,p2}},[board]);
   const stateStr=useMemo(()=>JSON.stringify({variant:vk,board,turn,phase,toPlace,mustRem,flying},null,2),[vk,board,turn,phase,toPlace,mustRem,flying]);
   const legal=(i:number,p:P)=>{ if(board[i]!==p||phase!=='moving'||mustRem!==null||winner!==0) return []; return destinationsFor(board,V,i,p,vk,flying); };
-  const checkWin=(nb:number[],toMove:P,ph:Phase):P|0=>{const my=toMove,mc=nb.filter(v=>v===my).length,oc=nb.filter(v=>v===-my as P).length;if(ph!=="placing"&&vk==='nine'&&oc<=2)return my;const canFly=flying&&vk==='nine'&&mc===3;let has=false;if(canFly)has=nb.some(v=>v===0);else{for(let i=0;i<nb.length;i++)if(nb[i]===my&&V.adj[i].some(n=>nb[n]===0)){has=true;break}}return ph!=="placing"&&!has?-my as P:0};
   const moveMsg=()=>`All pieces placed. Move along lines${vk==='nine'&&flying?' (or fly at 3)':''}.`;
 
   const click=(idx:number)=>{
     if((cpu&&turn===-1)||winner!==0)return;
     if(dbg&&phase==='placing'&&mustRem===null){push();const nb=board.slice();nb[idx]=nb[idx]===0?dbgActor:0;setBoard(nb);setMsg(`Debug: ${nb[idx]===0?'cleared':(nb[idx]===1?'P1':'P2')} at ${idx}.`);return}
-    if(mustRem!==null){const rem=mustRem; if(board[idx]!== (rem===1?-1:1))return; const R=[...removables(board,rem,V.mills)]; if(!R.includes(idx))return; push(); const nb=board.slice(); nb[idx]=0; setBoard(nb); setMustRem(null); const immediate=winnerAfterRemoval(nb,rem,vk,phase); if(immediate){setWinner(immediate);setMsg(`${immediate===1?'Player 1':(cpu?'CPU':'Player 2')} wins!`);setPhase('removing');return;} const ntp=nt(turn); setTurn(ntp); setPly(p=>p+1); if(phase==='placing'){ if(enterMoving(toPlace,null)){setPhase('moving');setMsg(moveMsg())} else setMsg(ntp===1?"Player 1: place":"Player 2: place"); } else { setMsg(ntp===1?"Player 1 to move.":"Player 2 to move."); } const w=checkWin(nb,ntp,phase); if(w){setMsg(`${w===1?'Player 1':(cpu?'CPU':'Player 2')} wins!`);setPhase('removing');setWinner(w);} return }
+    if(mustRem!==null){const rem=mustRem; if(board[idx]!== (rem===1?-1:1))return; const R=[...removables(board,rem,V.mills)]; if(!R.includes(idx))return; push(); const nb=board.slice(); nb[idx]=0; setBoard(nb); setMustRem(null); const immediate=winnerAfterRemoval(nb,rem,vk,phase); if(immediate){setWinner(immediate);setMsg(`${immediate===1?'Player 1':(cpu?'CPU':'Player 2')} wins!`);setPhase('removing');return;} const ntp=nt(turn); setTurn(ntp); setPly(p=>p+1); if(phase==='placing'){ if(enterMoving(toPlace,null)){setPhase('moving');setMsg(moveMsg())} else setMsg(ntp===1?"Player 1: place":"Player 2: place"); } else { setMsg(ntp===1?"Player 1 to move.":"Player 2 to move."); } const w=checkWin(nb,ntp,phase,V,vk,flying); if(w){setMsg(`${w===1?'Player 1':(cpu?'CPU':'Player 2')} wins!`);setPhase('removing');setWinner(w);} return }
     if(phase==='placing'){ if(!canPlace(toPlace,turn)||board[idx]!==0)return; push(); const nb=board.slice(); nb[idx]=turn; setBoard(nb); const nextTP=turn===1?{p1:toPlace.p1-1,p2:toPlace.p2}:{p1:toPlace.p1,p2:toPlace.p2-1}; setTP(nextTP); if(inMill(nb,idx,turn as P,V.mills)){setMustRem(turn);setMsg(`${turn===1?'Player 1':'Player 2'} formed a mill! Remove one.`)} else { const ntp=nt(turn); setTurn(ntp); setPly(p=>p+1); if(enterMoving(nextTP,null)){setPhase('moving');setMsg(moveMsg())} else setMsg(ntp===1?"Player 1: place":"Player 2: place"); } return }
-    if(phase==='moving'){ if(sel===null){ if(board[idx]!==turn)return; if(!legal(idx,turn).length)return; setSel(idx); setMsg('Select a target.'); } else { if(board[idx]===turn){ if(!legal(idx,turn).length)return; setSel(idx); return } const L=legal(sel,turn); if(!L.includes(idx))return; push(); const nb=board.slice(); nb[sel]=0; nb[idx]=turn; setBoard(nb); setLast({from:sel,to:idx}); setSel(null); if(inMill(nb,idx,turn,V.mills)){setMustRem(turn);setMsg(`${turn===1?'Player 1':'Player 2'} formed a mill! Remove one.`);return} const ntp=nt(turn); setTurn(ntp); setPly(p=>p+1); setMsg(ntp===1?"Player 1 to move.":"Player 2 to move."); const w=checkWin(nb,ntp,'moving'); if(w){setMsg(`${w===1?'Player 1':(cpu?'CPU':'Player 2')} wins!`);setPhase('removing');setWinner(w);} }}
+    if(phase==='moving'){ if(sel===null){ if(board[idx]!==turn)return; if(!legal(idx,turn).length)return; setSel(idx); setMsg('Select a target.'); } else { if(board[idx]===turn){ if(!legal(idx,turn).length)return; setSel(idx); return } const L=legal(sel,turn); if(!L.includes(idx))return; push(); const nb=board.slice(); nb[sel]=0; nb[idx]=turn; setBoard(nb); setLast({from:sel,to:idx}); setSel(null); if(inMill(nb,idx,turn,V.mills)){setMustRem(turn);setMsg(`${turn===1?'Player 1':'Player 2'} formed a mill! Remove one.`);return} const ntp=nt(turn); setTurn(ntp); setPly(p=>p+1); setMsg(ntp===1?"Player 1 to move.":"Player 2 to move."); const w=checkWin(nb,ntp,'moving',V,vk,flying); if(w){setMsg(`${w===1?'Player 1':(cpu?'CPU':'Player 2')} wins!`);setPhase('removing');setWinner(w);} }}
   };
 
   // CPU
@@ -92,7 +63,7 @@ export default function DaadiGame(){
     let rootBest:RootPick|null=null; let rootScore=-Infinity;
     const negamax=(b:number[],ph:Phase,tp:{p1:number;p2:number},pl:P,depth:number,alpha:number,beta:number):number=>{
       if(Date.now()-start>budget) return hEval(b,pl,ph,tp);
-      const w=checkWin(b,pl,ph); if(w===pl) return 1e6-(Dmax-depth); if(w===-pl) return -1e6+(Dmax-depth); if(depth===0) return hEval(b,pl,ph,tp);
+      const w=checkWin(b,pl,ph,VARIANTS[vk],vk,flying); if(w===pl) return 1e6-(Dmax-depth); if(w===-pl) return -1e6+(Dmax-depth); if(depth===0) return hEval(b,pl,ph,tp);
       const base:({t:'place';to:number}|{t:'move';from:number;to:number})[]=[];
       if(ph==='placing'&&canPlaceTP(tp,pl)){ for(let i=0;i<b.length;i++) if(b[i]===0) base.push({t:'place',to:i}); }
       else { for(let i=0;i<b.length;i++) if(b[i]===pl){ const ds=destinationsFor(b,VARIANTS[vk],i,pl,vk,flying); for(const to of ds) base.push({t:'move',from:i,to}); } }
@@ -113,9 +84,9 @@ export default function DaadiGame(){
     for(let d=1; d<=Dmax; d++){ negamax(board,phase,toPlace,p,d,-1e9,1e9); if(Date.now()-start>budget) break; }
     return rootBest;
   };
-  const doCPU=(a:Act)=>{ if(winner!==0)return; if(a.type==='remove'){push();const nb=board.slice();nb[a.idx]=0;setBoard(nb);setMustRem(null);const imm=winnerAfterRemoval(nb,-1,vk,phase);if(imm){setWinner(imm);setMsg('CPU wins!');setPhase('removing');return;} const ntp=nt(turn);setTurn(ntp); setPly(p=>p+1); if(phase==='placing'){ if(enterMoving(toPlace,null)){setPhase('moving');setMsg(moveMsg())} else setMsg(ntp===1?'Player 1: place':'Player 2: place'); } else { setMsg('Player 1 to move.'); } const w=checkWin(nb,ntp,phase); if(w){setMsg(`${w===1?'Player 1':'CPU'} wins!`);setPhase('removing');setWinner(w);} return }
+  const doCPU=(a:Act)=>{ if(winner!==0)return; if(a.type==='remove'){push();const nb=board.slice();nb[a.idx]=0;setBoard(nb);setMustRem(null);const imm=winnerAfterRemoval(nb,-1,vk,phase);if(imm){setWinner(imm);setMsg('CPU wins!');setPhase('removing');return;} const ntp=nt(turn);setTurn(ntp); setPly(p=>p+1); if(phase==='placing'){ if(enterMoving(toPlace,null)){setPhase('moving');setMsg(moveMsg())} else setMsg(ntp===1?'Player 1: place':'Player 2: place'); } else { setMsg('Player 1 to move.'); } const w=checkWin(nb,ntp,phase,V,vk,flying); if(w){setMsg(`${w===1?'Player 1':'CPU'} wins!`);setPhase('removing');setWinner(w);} return }
     if(phase==='placing'&&a.type==='place'){push();const nb=board.slice();nb[a.to]=-1;setBoard(nb);const tp={p1:toPlace.p1,p2:toPlace.p2-1};setTP(tp); if(inMill(nb,a.to,-1,VARIANTS[vk].mills)){setMustRem(-1);setMsg('CPU formed a mill! Removing...');} else {const ntp=nt(-1);setTurn(ntp); if(enterMoving(tp,null)){setPhase('moving');setMsg(moveMsg())} else setMsg('Player 1: place');} return }
-    if(phase==='moving'&&a.type==='move'){push();const allowed=destinationsFor(board,VARIANTS[vk],a.from,-1 as P,vk,flying); if(!allowed.includes(a.to)) { return; } const nb=board.slice();nb[a.from]=0;nb[a.to]=-1;setBoard(nb);setLast({from:a.from,to:a.to}); if(inMill(nb,a.to,-1,VARIANTS[vk].mills)){setMustRem(-1);setMsg('CPU formed a mill! Removing...');} else {const ntp=nt(-1);setTurn(ntp);setMsg('Player 1 to move.');const w=checkWin(nb,ntp,'moving'); if(w){setMsg(`${w===1?'Player 1':'CPU'} wins!`);setPhase('removing');setWinner(w);}} } };
+    if(phase==='moving'&&a.type==='move'){push();const allowed=destinationsFor(board,VARIANTS[vk],a.from,-1 as P,vk,flying); if(!allowed.includes(a.to)) { return; } const nb=board.slice();nb[a.from]=0;nb[a.to]=-1;setBoard(nb);setLast({from:a.from,to:a.to}); if(inMill(nb,a.to,-1,VARIANTS[vk].mills)){setMustRem(-1);setMsg('CPU formed a mill! Removing...');} else {const ntp=nt(-1);setTurn(ntp);setMsg('Player 1 to move.');const w=checkWin(nb,ntp,'moving',V,vk,flying); if(w){setMsg(`${w===1?'Player 1':'CPU'} wins!`);setPhase('removing');setWinner(w);}} } };
   useEffect(()=>{ if(!cpu||winner!==0||(dbg&&phase!=='moving')||turn!==-1||((mustRem!==null&&mustRem!==-1))||thinking.current)return; thinking.current=true; const t=setTimeout(()=>{const pick=searchBest(-1 as P); if(pick){ if(pick.remove!==undefined){ doCPU({type:'remove', idx: pick.remove}); } else { doCPU(pick.act); } } thinking.current=false},320); return()=>{clearTimeout(t);thinking.current=false} },[cpu,turn,phase,board,mustRem,flying,vk,toPlace,winner,dbg]);
 
   const sx=80, off=20, toXY=(p:[number,number])=>({cx:off+p[0]*sx,cy:off+p[1]*sx});
