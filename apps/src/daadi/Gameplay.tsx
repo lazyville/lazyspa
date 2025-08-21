@@ -3,6 +3,13 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { VARIANTS, K, P, Phase } from "./variants";
 import { inMill, collectMill, removables, canPlace, enterMoving, winnerAfterRemoval, destinationsFor, checkWin } from "./rules";
 
+const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" />
+    <path d="M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+  </svg>
+);
+
 const nt=(t:P)=>t===1?-1:1;
 
 export const hEval=(b:number[],p:P,ph:Phase,tp:{p1:number;p2:number},vk:K,flying:boolean)=>{
@@ -66,6 +73,7 @@ export default function Gameplay(){
   const [p1Color,setP1Color]=useState("#0f0f0f");
   const [p2Color,setP2Color]=useState("#ffffff");
   const [dark,setDark]=useState(false);
+  const [editing,setEditing]=useState<P|null>(null);
   useEffect(()=>{const s=localStorage.getItem('theme');if(s==='dark')setDark(true);},[]);
   useEffect(()=>{document.documentElement.classList.toggle('dark',dark);localStorage.setItem('theme',dark?'dark':'light');},[dark]);
   type Snap={board:number[];turn:P;phase:Phase;toPlace:{p1:number;p2:number};sel:number|null;mustRem:P|null;flying:boolean;last:{from:number|null;to:number|null}|null;msg:string;ply:number};
@@ -160,9 +168,9 @@ export default function Gameplay(){
           <span>Move: {ply}</span>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={undo} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 dark:bg-zinc-700 dark:border-zinc-600 dark:hover:bg-zinc-600">Undo</button>
-          <button onClick={()=>reset(true)} className="text-sm px-3 py-1.5 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">Reset</button>
-          <button onClick={()=>setDark(d=>!d)} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 dark:bg-zinc-700 dark:border-zinc-600 dark:hover:bg-zinc-600">{dark?"Light":"Dark"}</button>
+          <button onClick={undo} title="Undo" className="text-sm px-3 py-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 dark:bg-zinc-700 dark:border-zinc-600 dark:hover:bg-zinc-600">↺</button>
+          <button onClick={()=>reset(true)} title="Reset" className="text-sm px-3 py-1.5 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">🔄</button>
+          <button onClick={()=>setDark(d=>!d)} title="Toggle theme" className="text-sm px-3 py-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 dark:bg-zinc-700 dark:border-zinc-600 dark:hover:bg-zinc-600">{dark?"🌞":"🌙"}</button>
         </div>
       </header>
 
@@ -187,8 +195,26 @@ export default function Gameplay(){
           <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow p-4">
             <p className="text-sm leading-relaxed">{msg}</p>
             <div className="mt-3 flex flex-col gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-              <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full border" style={{background:p1Color}}></span>{p1Name} on board: {counts.p1} &nbsp; to place: {toPlace.p1}</div>
-              <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full border" style={{background:p2Color}}></span>{p2Name} on board: {counts.p2} &nbsp; to place: {toPlace.p2}</div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full border" style={{background:p1Color}}></span>
+                <span className="flex items-center gap-1">
+                  {p1Name}
+                  <button onClick={()=>setEditing(1)} title="Edit" className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
+                    <PencilIcon className="w-4 h-4"/>
+                  </button>
+                </span>
+                <span className="ml-1">on board: {counts.p1} &nbsp; to place: {toPlace.p1}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full border" style={{background:p2Color}}></span>
+                <span className="flex items-center gap-1">
+                  {p2Name}
+                  <button onClick={()=>setEditing(-1)} title="Edit" className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
+                    <PencilIcon className="w-4 h-4"/>
+                  </button>
+                </span>
+                <span className="ml-1">on board: {counts.p2} &nbsp; to place: {toPlace.p2}</span>
+              </div>
             </div>
           </div>
 
@@ -197,17 +223,6 @@ export default function Gameplay(){
             <div className="mt-3 text-sm space-y-3">
               <label className="flex items-center gap-2 select-none"><input type="checkbox" checked={cpu} onChange={e=>{setCPU(e.target.checked); if(e.target.checked) setP2Name('CPU'); else if(p2Name==='CPU') setP2Name('Player 2');}}/><span>CPU as Player 2</span></label>
               {vk==='nine'&&<label className="flex items-center gap-2 select-none"><input type="checkbox" checked={flying} onChange={e=>setFlying(e.target.checked)}/><span>Allow flying at 3</span></label>}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <input type="color" value={p1Color} onChange={e=>setP1Color(e.target.value)} className="h-8 w-8 p-0 border rounded"/>
-                  <input type="text" value={p1Name} onChange={e=>setP1Name(e.target.value)} className="flex-1 border rounded px-2 py-1"/>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input type="color" value={p2Color} onChange={e=>setP2Color(e.target.value)} className="h-8 w-8 p-0 border rounded"/>
-                  <input type="text" value={p2Name} onChange={e=>setP2Name(e.target.value)} disabled={cpu} className="flex-1 border rounded px-2 py-1 disabled:opacity-50"/>
-                </div>
-                <button onClick={()=>{setP1Color(p2Color);setP2Color(p1Color);}} className="text-xs px-2 py-1 rounded border border-zinc-300 hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-700">Swap colors</button>
-              </div>
               {dbg && (<label className="flex items-center gap-2 select-none"><input type="checkbox" checked={dbg} onChange={e=>setDbg(e.target.checked)}/><span>Test / Debug mode</span></label>)}
               {dbg&&<div className="ml-5 space-y-2">
                 <div className="flex items-center gap-3"><span className="text-zinc-600 dark:text-zinc-400">Place as:</span><label className="flex items-center gap-1"><input type="radio" name="dbgActor" checked={dbgActor===1} onChange={()=>setDbgActor(1)}/><span>Player 1</span></label><label className="flex items-center gap-1"><input type="radio" name="dbgActor" checked={dbgActor===-1} onChange={()=>setDbgActor(-1)}/><span>Player 2</span></label></div>
@@ -244,6 +259,22 @@ export default function Gameplay(){
       </div>
 
       <footer className="mt-6 text-xs text-center text-zinc-500 dark:text-zinc-400">Built with ❤️ – Daadi (Navakankari) & Chinna Daadi</footer>
+
+      {editing!==null && (
+        <div className="fixed inset-0 bg-black/30 dark:bg-black/60 flex items-center justify-center p-4 z-40">
+          <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow p-4 w-full max-w-xs">
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center gap-2">
+                <input type="color" value={editing===1?p1Color:p2Color} onChange={e=>editing===1?setP1Color(e.target.value):setP2Color(e.target.value)} className="h-8 w-8 p-0 border rounded"/>
+                <input type="text" value={editing===1?p1Name:p2Name} onChange={e=>editing===1?setP1Name(e.target.value):setP2Name(e.target.value)} disabled={editing===-1 && cpu} className="flex-1 border rounded px-2 py-1 disabled:opacity-50"/>
+              </div>
+              <div className="flex justify-end">
+                <button onClick={()=>setEditing(null)} className="text-xs px-2 py-1 rounded border border-zinc-300 hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-700">Done</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {winner!==0&&(<div className="fixed inset-0 bg-black/30 dark:bg-black/60 flex items-center justify-center p-4 z-50"><div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl p-6 w-full max-w-sm text-center relative overflow-hidden">
         <style>{`@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}@keyframes dash{from{stroke-dashoffset:140}to{stroke-dashoffset:0}}`}</style>
