@@ -145,7 +145,7 @@ export default function Gameplay(){
         </div>
       </header>
 
-      <div className="flex-1 w-full flex flex-col md:flex-row items-start gap-6 p-4 max-w-6xl mx-auto">
+      <div className="flex-1 w-full flex flex-col md:flex-row items-start gap-6 p-4 md:p-6 lg:p-8">
         <div className="flex-1 flex items-center justify-center">
           <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow p-2 sm:p-4 md:p-6">
             <svg viewBox={`0 0 ${off*2+6*sx} ${off*2+6*sx}`} className="w-full h-auto text-zinc-700 dark:text-zinc-300 touch-manipulation select-none">
