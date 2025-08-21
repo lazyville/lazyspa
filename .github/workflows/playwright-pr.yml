@@ -24,8 +24,8 @@ jobs:
 
       - name: Install deps
         run: |
-          npm ci
-          npx playwright install --with-deps
+          npm run build
+          npx -p @playwright/test playwright install --with-deps
 
       - name: Run Playwright
         run: npm run test:playwright
