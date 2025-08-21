@@ -1,15 +1,12 @@
-name: Deploy to GitHub Pages
+name: CI
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: write
+  pull_request:
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -23,9 +20,3 @@ jobs:
           cache-dependency-path: apps/package-lock.json
       - run: npm ci
       - run: npm test
-      - run: npm run build
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: apps/dist
