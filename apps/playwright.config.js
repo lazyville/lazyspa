@@ -1,6 +1,4 @@
-import { defineConfig } from '@playwright/test';
-
-export default defineConfig({
+const config = {
   testDir: './tests',
   webServer: {
     command: 'npm run preview',
@@ -10,4 +8,6 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:4173',
   },
-});
+};
+
+export default config;
