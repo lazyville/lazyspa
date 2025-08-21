@@ -1,61 +1,134 @@
 import { K, P, Phase, Variant } from './variants';
 
-export const inMill = (b:number[], i:number, p:P, m:number[][]):boolean =>
-  m.some(x => x.includes(i) && x.every(j => b[j] === p));
+/**
+ * True if the piece at `idx` for `player` forms a mill.
+ */
+export function inMill(
+  board: number[],
+  idx: number,
+  player: P,
+  mills: number[][],
+): boolean {
+  return mills.some(
+    (mill) => mill.includes(idx) && mill.every((j) => board[j] === player),
+  );
+}
 
-export const collectMill = (b:number[], p:P, m:number[][]):Set<number> => {
-  const s = new Set<number>();
-  for (const x of m) if (x.every(i => b[i] === p)) x.forEach(i => s.add(i));
-  return s;
-};
-
-export const removables = (b:number[], rem:P, m:number[][]):Set<number> => {
-  const vic = rem === 1 ? -1 : 1;
-  const S = collectMill(b, vic as P, m);
-  const tot = b.filter(v => v === vic).length;
-  const R = new Set<number>();
-  b.forEach((v,i)=>{ if(v===vic) if(!S.has(i) || S.size===tot) R.add(i); });
-  return R;
-};
-
-export const canPlace = (tp:{p1:number;p2:number}, p:P):boolean => p===1?tp.p1>0:tp.p2>0;
-
-export const enterMoving = (tp:{p1:number;p2:number}, mr:P|null):boolean => tp.p1===0 && tp.p2===0 && mr===null;
-
-export const winnerAfterRemoval = (b:number[], rem:P, vk:K, ph:Phase):P|0 =>
-  (ph!== 'placing' && vk==='nine' && b.filter(v=>v=== (rem===1?-1:1)).length<=2 ? rem : 0) as P|0;
-
-export const destinationsFor = (
-  b:number[],
-  variant:Variant,
-  idx:number,
-  p:P,
-  vk:K,
-  flying:boolean
-):number[]=>{
-  const cnt=b.filter(v=>v===p).length;
-  const canFly=flying && vk==='nine' && cnt===3;
-  return canFly ? b.map((v,i)=>v===0?i:-1).filter(i=>i!==-1) : variant.adj[idx].filter(n=>b[n]===0);
-};
-
-export const checkWin = (
-  nb:number[],
-  toMove:P,
-  ph:Phase,
-  variant:Variant,
-  vk:K,
-  flying:boolean
-):P|0=>{
-  const my=toMove,
-        mc=nb.filter(v=>v===my).length,
-        oc=nb.filter(v=>v===-my as P).length;
-  if(ph!=='placing' && vk==='nine' && oc<=2) return my;
-  const canFly=flying && vk==='nine' && mc===3;
-  let has=false;
-  if(canFly) has=nb.some(v=>v===0);
-  else {
-    for(let i=0;i<nb.length;i++)
-      if(nb[i]===my && variant.adj[i].some(n=>nb[n]===0)) {has=true;break;}
+/**
+ * Collect all positions occupied by complete mills for `player`.
+ */
+export function collectMill(board: number[], player: P, mills: number[][]): Set<number> {
+  const result = new Set<number>();
+  for (const mill of mills) {
+    if (mill.every((i) => board[i] === player)) {
+      mill.forEach((i) => result.add(i));
+    }
   }
-  return ph!=='placing' && !has ? -my as P : 0;
+  return result;
+}
+
+/**
+ * Determine which opponent pieces may be removed when `remover` forms a mill.
+ * Prefer pieces not currently in a mill unless all are in mills.
+ */
+export function removables(board: number[], remover: P, mills: number[][]): Set<number> {
+  const victim = remover === 1 ? -1 : 1;
+  const victimMills = collectMill(board, victim as P, mills);
+  const totalVictims = board.filter((v) => v === victim).length;
+  const result = new Set<number>();
+
+  board.forEach((v, i) => {
+    if (v === victim && (!victimMills.has(i) || victimMills.size === totalVictims)) {
+      result.add(i);
+    }
+  });
+
+  return result;
+}
+
+/** Can the player still place a piece? */
+export const canPlace = (
+  toPlace: { p1: number; p2: number },
+  player: P,
+): boolean => (player === 1 ? toPlace.p1 > 0 : toPlace.p2 > 0);
+
+/** Enter moving phase once both players have placed all pieces and no removal pending. */
+export const enterMoving = (
+  toPlace: { p1: number; p2: number },
+  mustRemove: P | null,
+): boolean => toPlace.p1 === 0 && toPlace.p2 === 0 && mustRemove === null;
+
+/**
+ * Immediate win check after removing a piece.
+ * Only applies outside the placing phase in the nine-men variant.
+ */
+export const winnerAfterRemoval = (
+  board: number[],
+  remover: P,
+  variantKey: K,
+  phase: Phase,
+): P | 0 => {
+  if (phase !== 'placing' && variantKey === 'nine') {
+    const opponent = remover === 1 ? -1 : 1;
+    if (board.filter((v) => v === opponent).length <= 2) {
+      return remover;
+    }
+  }
+  return 0;
+};
+
+/**
+ * All legal destinations for `player` moving from `idx`.
+ */
+export const destinationsFor = (
+  board: number[],
+  variant: Variant,
+  idx: number,
+  player: P,
+  variantKey: K,
+  flying: boolean,
+): number[] => {
+  const count = board.filter((v) => v === player).length;
+  const canFly = flying && variantKey === 'nine' && count === 3;
+  if (canFly) {
+    return board.flatMap((v, i) => (v === 0 ? [i] : []));
+  }
+  return variant.adj[idx].filter((n) => board[n] === 0);
+};
+
+/**
+ * Determine the winner after `toMove` plays, or 0 if the game continues.
+ */
+export const checkWin = (
+  board: number[],
+  toMove: P,
+  phase: Phase,
+  variant: Variant,
+  variantKey: K,
+  flying: boolean,
+): P | 0 => {
+  const my = toMove;
+  const opponent = -my as P;
+  const myCount = board.filter((v) => v === my).length;
+  const oppCount = board.filter((v) => v === opponent).length;
+
+  if (phase !== 'placing' && variantKey === 'nine' && oppCount <= 2) {
+    return my;
+  }
+
+  const canFly = flying && variantKey === 'nine' && myCount === 3;
+  let hasMove = false;
+
+  if (canFly) {
+    hasMove = board.some((v) => v === 0);
+  } else {
+    for (let i = 0; i < board.length; i++) {
+      if (board[i] === my && variant.adj[i].some((n) => board[n] === 0)) {
+        hasMove = true;
+        break;
+      }
+    }
+  }
+
+  return phase !== 'placing' && !hasMove ? opponent : 0;
 };

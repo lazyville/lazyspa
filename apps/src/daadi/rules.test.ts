@@ -1,12 +1,27 @@
 import { describe, it, expect } from 'vitest';
 import { VARIANTS } from './variants';
-import { inMill, removables, destinationsFor, checkWin } from './rules';
+import {
+  inMill,
+  collectMill,
+  removables,
+  destinationsFor,
+  enterMoving,
+  winnerAfterRemoval,
+  checkWin,
+} from './rules';
 
 describe('rules helpers', () => {
   it('detects mills', () => {
     const b = Array(24).fill(0);
     b[0]=b[1]=b[2]=1;
     expect(inMill(b,1,1,VARIANTS.nine.mills)).toBe(true);
+  });
+
+  it('collects complete mills', () => {
+    const b = Array(24).fill(0);
+    b[0]=b[1]=b[2]=1;
+    const s = collectMill(b,1,VARIANTS.nine.mills);
+    expect([...s].sort()).toEqual([0,1,2]);
   });
 
   it('prefers removing pieces not in mills', () => {
@@ -17,6 +32,12 @@ describe('rules helpers', () => {
     const r = removables(b,1,VARIANTS.nine.mills);
     expect(r.has(3)).toBe(true);
     expect(r.has(0)).toBe(false);
+  });
+
+  it('enters moving phase only when all pieces placed and none to remove', () => {
+    expect(enterMoving({p1:0,p2:0}, null)).toBe(true);
+    expect(enterMoving({p1:1,p2:0}, null)).toBe(false);
+    expect(enterMoving({p1:0,p2:0}, 1)).toBe(false);
   });
 
   it('limits movement when not flying', () => {
@@ -31,6 +52,13 @@ describe('rules helpers', () => {
     const b = Array(24).fill(0);
     b[0]=b[14]=-1;
     expect(checkWin(b,1,'moving',VARIANTS.nine,'nine',true)).toBe(1);
+  });
+
+  it('detects immediate win after removal', () => {
+    const b = Array(24).fill(0);
+    b[0]=b[14]=-1;
+    expect(winnerAfterRemoval(b,1,'nine','moving')).toBe(1);
+    expect(winnerAfterRemoval(b,1,'nine','placing')).toBe(0);
   });
 
   it('detects no legal moves', () => {
