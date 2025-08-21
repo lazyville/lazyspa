@@ -4,8 +4,9 @@
     "noEmit": false,
     "outDir": "dist",
     "module": "CommonJS",
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "types": []
   },
-  "include": ["src"],
+  "include": ["src/**/*.test.ts", "src/node-stubs.d.ts"],
   "exclude": []
 }

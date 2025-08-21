@@ -1,5 +1,11 @@
 # Lazy SPA
-These single page apps are lazily created using AI and some sugar!
+
+Monorepo containing the LazySpa gaming framework and sample apps.
+
+## Packages
+- `@lazyspa/core` – gameplay engine abstractions
+- `@lazyspa/ui` – shared React UI components
+- `@lazyspa/apps` – demo site listing available games
 
 ## Deployment
 

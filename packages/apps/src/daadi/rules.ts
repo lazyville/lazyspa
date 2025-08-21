@@ -1,4 +1,4 @@
-import { K, P, Phase, Variant } from './variants';
+import type { K, P, Phase, Variant } from './variants';
 
 /**
  * True if the piece at `idx` for `player` forms a mill.
