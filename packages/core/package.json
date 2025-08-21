@@ -1,0 +1,12 @@
+{
+  "name": "@lazyspa/core",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node dist/__tests__/turnManager.test.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
