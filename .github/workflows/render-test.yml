@@ -1,0 +1,31 @@
+name: Render Tests
+
+on:
+  pull_request:
+    paths:
+      - 'apps/**'
+      - '.github/workflows/render-test.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps
+      - run: npm run test:playwright
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-screenshots
+          path: apps/test-results
+          if-no-files-found: ignore
