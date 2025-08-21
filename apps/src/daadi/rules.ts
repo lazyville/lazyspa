@@ -60,15 +60,15 @@ export const enterMoving = (
 
 /**
  * Immediate win check after removing a piece.
- * Only applies outside the placing phase in the nine-men variant.
+ * Applies outside the placing phase for all variants.
  */
 export const winnerAfterRemoval = (
   board: number[],
   remover: P,
-  variantKey: K,
+  _variantKey: K,
   phase: Phase,
 ): P | 0 => {
-  if (phase !== 'placing' && variantKey === 'nine') {
+  if (phase !== 'placing') {
     const opponent = remover === 1 ? -1 : 1;
     if (board.filter((v) => v === opponent).length <= 2) {
       return remover;
@@ -107,23 +107,22 @@ export const checkWin = (
   variantKey: K,
   flying: boolean,
 ): P | 0 => {
-  const my = toMove;
-  const opponent = -my as P;
-  const myCount = board.filter((v) => v === my).length;
-  const oppCount = board.filter((v) => v === opponent).length;
+  const player = toMove;
+  const opponent = -player as P;
+  const playerCount = board.filter((v) => v === player).length;
 
-  if (phase !== 'placing' && variantKey === 'nine' && oppCount <= 2) {
-    return my;
+  if (phase !== 'placing' && playerCount <= 2) {
+    return opponent;
   }
 
-  const canFly = flying && variantKey === 'nine' && myCount === 3;
+  const canFly = flying && variantKey === 'nine' && playerCount === 3;
   let hasMove = false;
 
   if (canFly) {
     hasMove = board.some((v) => v === 0);
   } else {
     for (let i = 0; i < board.length; i++) {
-      if (board[i] === my && variant.adj[i].some((n) => board[n] === 0)) {
+      if (board[i] === player && variant.adj[i].some((n) => board[n] === 0)) {
         hasMove = true;
         break;
       }
