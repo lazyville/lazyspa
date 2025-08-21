@@ -96,7 +96,30 @@ export default function Gameplay(){
   const doCPU=(a:Act)=>{ if(winner!==0)return; if(a.type==='remove'){push();const nb=board.slice();nb[a.idx]=0;setBoard(nb);setMustRem(null);const imm=winnerAfterRemoval(nb,-1,vk,phase);if(imm){setWinner(imm);setMsg(`${nameOf(-1)} wins!`);setPhase('removing');return;} const ntp=nt(turn);setTurn(ntp); setPly(p=>p+1); if(phase==='placing'){ if(enterMoving(toPlace,null)){setPhase('moving');setMsg(moveMsg())} else setMsg(`${nameOf(ntp)}: place`); } else { setMsg(`${nameOf(1)} to move.`); } const w=checkWin(nb,ntp,phase,V,vk,flying); if(w){setMsg(`${nameOf(w as P)} wins!`);setPhase('removing');setWinner(w);} return }
     if(phase==='placing'&&a.type==='place'){push();const nb=board.slice();nb[a.to]=-1;setBoard(nb);const tp={p1:toPlace.p1,p2:toPlace.p2-1};setTP(tp); if(inMill(nb,a.to,-1,VARIANTS[vk].mills)){setMustRem(-1);setMsg(`${nameOf(-1)} formed a mill! Removing...`);} else {const ntp=nt(-1);setTurn(ntp); if(enterMoving(tp,null)){setPhase('moving');setMsg(moveMsg())} else setMsg(`${nameOf(1)}: place`);} return }
     if(phase==='moving'&&a.type==='move'){push();const allowed=destinationsFor(board,VARIANTS[vk],a.from,-1 as P,vk,flying); if(!allowed.includes(a.to)) { return; } const nb=board.slice();nb[a.from]=0;nb[a.to]=-1;setBoard(nb);setLast({from:a.from,to:a.to}); if(inMill(nb,a.to,-1,VARIANTS[vk].mills)){setMustRem(-1);setMsg(`${nameOf(-1)} formed a mill! Removing...`);} else {const ntp=nt(-1);setTurn(ntp);setMsg(`${nameOf(1)} to move.`);const w=checkWin(nb,ntp,'moving',V,vk,flying); if(w){setMsg(`${nameOf(w as P)} wins!`);setPhase('removing');setWinner(w);}} } };
-  useEffect(()=>{ if(!cpu||winner!==0||(dbg&&phase!=='moving')||turn!==-1||((mustRem!==null&&mustRem!==-1))||thinking.current)return; thinking.current=true; const t=setTimeout(()=>{const pick=searchBest(-1 as P); if(pick){ if(pick.remove!==undefined){ doCPU({type:'remove', idx: pick.remove}); } else { doCPU(pick.act); } } thinking.current=false},320); return()=>{clearTimeout(t);thinking.current=false} },[cpu,turn,phase,board,mustRem,flying,vk,toPlace,winner,dbg]);
+  useEffect(()=>{
+    if(!cpu||winner!==0||(dbg&&phase!=='moving')||turn!==-1||thinking.current)return;
+    if(mustRem!==null&&mustRem!==-1)return;
+    thinking.current=true;
+    const t=setTimeout(()=>{
+      if(mustRem===-1){
+        const R=[...removables(board,-1,VARIANTS[vk].mills)];
+        if(R.length){
+          let best=R[0],bestVal=-Infinity;
+          for(const r of R){
+            const b2=board.slice();b2[r]=0;
+            const val=hEval(b2,-1,phase,toPlace);
+            if(val>bestVal){bestVal=val;best=r;}
+          }
+          doCPU({type:'remove',idx:best});
+        }
+      } else {
+        const pick=searchBest(-1 as P);
+        if(pick){ if(pick.remove!==undefined){ doCPU({type:'remove', idx: pick.remove}); } else { doCPU(pick.act); } }
+      }
+      thinking.current=false;
+    },320);
+    return()=>{clearTimeout(t);thinking.current=false}
+  },[cpu,turn,phase,board,mustRem,flying,vk,toPlace,winner,dbg]);
 
   const sx=80, off=20, toXY=(p:[number,number])=>({cx:off+p[0]*sx,cy:off+p[1]*sx});
   const mill1=collectMill(board,1,VARIANTS[vk].mills), mill2=collectMill(board,-1,VARIANTS[vk].mills);
