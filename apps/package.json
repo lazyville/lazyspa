@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "tsc -p tsconfig.test.json && echo '{\"type\":\"commonjs\"}' > dist/package.json && node --test dist/**/*.test.js",
-    "test:playwright": "npx -p @playwright/test playwright test"
+    "test:playwright": "playwright test"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -25,6 +25,7 @@
     "tailwindcss": "^3.4.9",
     "typescript": "^5.4.5",
     "vite": "^5.0.0",
-    "vite-plugin-node-polyfills": "^0.24.0"
+    "vite-plugin-node-polyfills": "^0.24.0",
+    "@playwright/test": "^1.55.0"
   }
 }
