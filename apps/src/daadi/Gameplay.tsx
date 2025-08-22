@@ -74,6 +74,7 @@ export default function Gameplay(){
   const [p2Color,setP2Color]=useState("#ffffff");
   const [dark,setDark]=useState(false);
   const [editing,setEditing]=useState<P|null>(null);
+  const [maxBoard,setMaxBoard]=useState(false);
   useEffect(()=>{const s=localStorage.getItem('theme');if(s==='dark')setDark(true);},[]);
   useEffect(()=>{document.documentElement.classList.toggle('dark',dark);localStorage.setItem('theme',dark?'dark':'light');},[dark]);
   type Snap={board:number[];turn:P;phase:Phase;toPlace:{p1:number;p2:number};sel:number|null;mustRem:P|null;flying:boolean;last:{from:number|null;to:number|null}|null;msg:string;ply:number};
@@ -170,13 +171,14 @@ export default function Gameplay(){
         <div className="flex items-center gap-2">
           <button onClick={undo} title="Undo" className="text-sm px-3 py-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 dark:bg-zinc-700 dark:border-zinc-600 dark:hover:bg-zinc-600">↺</button>
           <button onClick={()=>reset(true)} title="Reset" className="text-sm px-3 py-1.5 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">🔄</button>
+          <button onClick={()=>setMaxBoard(m=>!m)} title={maxBoard?"Show panel":"Hide panel"} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 dark:bg-zinc-700 dark:border-zinc-600 dark:hover:bg-zinc-600">{maxBoard?"☰":"⛶"}</button>
           <button onClick={()=>setDark(d=>!d)} title="Toggle theme" className="text-sm px-3 py-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 dark:bg-zinc-700 dark:border-zinc-600 dark:hover:bg-zinc-600">{dark?"🌞":"🌙"}</button>
         </div>
       </header>
 
       <div className="flex-1 w-full flex flex-col md:flex-row items-start gap-6 p-4 md:p-6 lg:p-8">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-full max-w-3xl aspect-square bg-white dark:bg-zinc-800 rounded-2xl shadow p-2 sm:p-4 md:p-6">
+        <div className="flex-1 flex items-center justify-center relative">
+          <div className={`w-full ${maxBoard?'max-w-full':'max-w-3xl'} aspect-square bg-white dark:bg-zinc-800 rounded-2xl shadow p-2 sm:p-4 md:p-6`}>
             <svg viewBox={`0 0 ${off*2+6*sx} ${off*2+6*sx}`} className="w-full h-full text-zinc-700 dark:text-zinc-300 touch-manipulation select-none">
               <g>{VARIANTS[vk].drawLines(sx,off)}</g>
               {VARIANTS[vk].points.map((p,i)=>{const {cx,cy}=toXY(p);const o=board[i];const seld=sel===i;const lastHit=last&&(last.from===i||last.to===i);const canGo=sel!==null&&legal(sel,turn).includes(i);const canPlaceHere=phase==='placing'&&board[i]===0&&mustRem===null&&(turn===1||!cpu)&&canPlace(toPlace,turn)&&!dbg;const canRem=mustRem!==null&&remSet.has(i)&&board[i]===(mustRem===1?-1:1);const inM=o===1?mill1.has(i):o===-1?mill2.has(i):false;return (
@@ -189,9 +191,12 @@ export default function Gameplay(){
                 </g>)})}
             </svg>
           </div>
+          {maxBoard && (
+            <button onClick={()=>setMaxBoard(false)} title="Show panel" className="absolute top-2 left-2 z-10 px-3 py-2 rounded-lg border border-zinc-300 bg-white/80 hover:bg-white dark:bg-zinc-800/80 dark:border-zinc-600 dark:hover:bg-zinc-700">☰</button>
+          )}
         </div>
 
-        <div className="w-full md:w-80 flex flex-col gap-4">
+        <div className={`w-full md:w-80 flex flex-col gap-4 ${maxBoard?'hidden':''}`}>
           <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow p-4">
             <p className="text-sm leading-relaxed">{msg}</p>
             <div className="mt-3 flex flex-col gap-2 text-sm text-zinc-600 dark:text-zinc-400">
