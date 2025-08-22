@@ -1,0 +1,138 @@
+name: Playwright on PR (with screenshots)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write # push screenshots to ci-artifacts branch
+  pull-requests: write # create/update PR comments
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: |
+          npm run build
+          npx -p @playwright/test playwright install --with-deps
+
+      - name: Run Playwright
+        run: npm run test:playwright
+        continue-on-error: true # we still want to collect screenshots & comment
+
+      # Always collect screenshots (and optionally traces/videos) as an artifact
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            test-results/**/*.png
+            test-results/**/*.zip
+            test-results/**/*.webm
+            playwright-report/**
+          if-no-files-found: ignore
+          compression-level: 6
+
+      # Publish screenshots to a dedicated branch so we can embed them in a PR comment
+      - name: Stage screenshots to workspace
+        if: always()
+        id: stage
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+          SHA: ${{ github.sha }}
+        run: |
+          mkdir -p .ci-screenshots/pr-${PR_NUMBER}/${SHA}
+          shopt -s globstar nullglob
+          cp -r test-results/**/*.png .ci-screenshots/pr-${PR_NUMBER}/${SHA}/ || true
+          # Playwright HTML report sometimes stores images under assets/
+          cp -r playwright-report/**/*.png .ci-screenshots/pr-${PR_NUMBER}/${SHA}/ || true
+          count=$(find .ci-screenshots/pr-${PR_NUMBER}/${SHA} -type f -name '*.png' | wc -l | xargs)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+      - name: Push screenshots to ci-artifacts branch (same-repo PRs only)
+        if: always() && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+          SHA: ${{ github.sha }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Fetch or create ci-artifacts branch
+          git fetch origin ci-artifacts || true
+          git checkout -B ci-artifacts origin/ci-artifacts || git checkout -B ci-artifacts
+
+          # Bring the staged screenshots into this branch
+          mkdir -p .ci-screenshots
+          # Copy from the previous step's workspace (we are still in the same worktree)
+          # They already exist in the worktree; just ensure they’re added:
+          git add .ci-screenshots
+          git commit -m "PR #${PR_NUMBER}: screenshots for ${SHA}" || echo "No changes to commit"
+          git push origin ci-artifacts
+
+      - name: Build PR comment body (write comment.md)
+        if: always()
+        run: |
+          set -euo pipefail
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          PR="${{ github.event.number }}"
+          SHA="${{ github.sha }}"
+          REPO="${{ github.repository }}"
+          BASE="https://raw.githubusercontent.com/${REPO}/ci-artifacts/.ci-screenshots/pr-${PR}/${SHA}"
+              
+          # Try to list up to 12 PNGs if the folder exists; don't fail if it doesn't
+          FILES=""
+          if [ -d ".ci-screenshots/pr-${PR}/${SHA}" ]; then
+            FILES=$(find ".ci-screenshots/pr-${PR}/${SHA}" -type f -name '*.png' -maxdepth 1 2>/dev/null | head -n 12)
+          fi
+              
+          {
+            echo "## 📸 Playwright Screenshots"
+            echo
+            if [ -n "$FILES" ]; then
+              echo "_Top screenshots (click to expand)_"
+              echo
+              # Show each file in a collapsible block
+              while IFS= read -r f; do
+                fname="$(basename "$f")"
+                echo "<details><summary>${fname}</summary>"
+                echo
+                echo "![${fname}](${BASE}/${fname})"
+                echo
+                echo "</details>"
+              done <<< "$FILES"
+              echo
+              echo "> Full run & all artifacts: ${RUN_URL}"
+            else
+              echo "No screenshots embedded."
+              echo
+              echo "• If tests didn’t fail, Playwright may not have produced screenshots."
+              echo "• See the run artifacts here: ${RUN_URL}"
+            fi
+          } > comment.md
+              
+          # Sanity logs to help debug path issues if this ever breaks again
+          echo "Created comment.md in: $(pwd)"
+          ls -la comment.md
+
+      - name: Create or update PR comment
+        if: always()
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.number }}
+          body-file: comment.md
+          edit-mode: replace
