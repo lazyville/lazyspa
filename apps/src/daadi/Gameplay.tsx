@@ -58,6 +58,23 @@ r.push({name:"CPU no fly when >3", pass:(()=>{const b2=Array(24).fill(0); b2[22]
   return d.every(i=>adjSet.has(i)) && d.length===adjSet.size;})()});
 return r;}
 
+type ShareState={
+  variant:K;
+  board:number[];
+  turn:P;
+  phase:Phase;
+  toPlace:{p1:number;p2:number};
+  mustRem:P|null;
+  flying:boolean;
+};
+
+const stateToUrl=(s:ShareState)=>{
+  const encoded=encodeURIComponent(btoa(JSON.stringify(s)));
+  const url=`${window.location.origin}${window.location.pathname}?s=${encoded}`;
+  window.history.replaceState(null,"",url);
+  return url;
+};
+
 export default function Gameplay(){
   const [vk,setVk]=useState<K>("nine"); const V=useMemo(()=>VARIANTS[vk],[vk]);
   const [board,setBoard]=useState<number[]>(()=>Array(V.points.length).fill(0));
@@ -75,19 +92,57 @@ export default function Gameplay(){
   const [p2Color,setP2Color]=useState("#ffffff");
   const [dark,setDark]=useState(false);
   const [editing,setEditing]=useState<P|null>(null);
+  const loadRef=useRef<ShareState|null>(null);
   useEffect(()=>{const s=localStorage.getItem('theme');if(s==='dark')setDark(true);},[]);
   useEffect(()=>{document.documentElement.classList.toggle('dark',dark);localStorage.setItem('theme',dark?'dark':'light');},[dark]);
   type Snap={board:number[];turn:P;phase:Phase;toPlace:{p1:number;p2:number};sel:number|null;mustRem:P|null;flying:boolean;last:{from:number|null;to:number|null}|null;msg:string;ply:number};
   const [hist,setHist]=useState<Snap[]>([]);const push=()=>setHist(h=>[...h,{board:[...board],turn,phase,toPlace:{...toPlace},sel,mustRem,flying,last: last?{...last}:null,msg,ply}]);
   const undo=()=>setHist(h=>{if(!h.length)return h;const s=h[h.length-1];setBoard(s.board);setTurn(s.turn);setPhase(s.phase);setTP(s.toPlace);setSel(s.sel);setMustRem(s.mustRem);setFlying(s.flying);setLast(s.last);setMsg(s.msg);setPly(s.ply);setWinner(0);return h.slice(0,-1)});
   const reset=(keepV?:boolean)=>{const v=keepV?V:VARIANTS[vk];setBoard(Array(v.points.length).fill(0));setTurn(1);setPhase("placing");setTP({p1:v.initialPieces,p2:v.initialPieces});setSel(null);setMustRem(null);setFlying(v.allowFlyingDefault);setLast(null);setMsg("Place pieces. Make a mill to remove.");setHist([]);setTests(null);setWinner(0);setDbg(false);setPly(1)};
-  useEffect(()=>{reset(true)},[vk]);
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.search);
+    const s=params.get('s');
+    if(s){
+      try{
+        const parsed=JSON.parse(atob(decodeURIComponent(s))) as ShareState;
+        loadRef.current=parsed;
+        if(parsed.variant!==vk) setVk(parsed.variant);
+      }catch(e){
+        console.error('Invalid share state',e);
+      }
+    }
+  },[]);
+  useEffect(()=>{
+    if(loadRef.current){
+      const s=loadRef.current;
+      if(s.variant!==vk){setVk(s.variant);return;}
+      setBoard(s.board);
+      setTurn(s.turn);
+      setPhase(s.phase);
+      setTP(s.toPlace);
+      setSel(null);
+      setMustRem(s.mustRem);
+      setFlying(s.flying);
+      setLast(null);
+      setHist([]);
+      setWinner(0);
+      setMsg('Game loaded from share link.');
+      loadRef.current=null;
+    }else{
+      reset(true);
+    }
+  },[vk]);
   const counts=useMemo(()=>{let p1=0,p2=0;board.forEach(v=>{if(v===1)p1++;else if(v===-1)p2++});return {p1,p2}},[board]);
   const stateStr=useMemo(()=>JSON.stringify({variant:vk,board,turn,phase,toPlace,mustRem,flying},null,2),[vk,board,turn,phase,toPlace,mustRem,flying]);
   const legal=(i:number,p:P)=>{ if(board[i]!==p||phase!=='moving'||mustRem!==null||winner!==0) return []; return destinationsFor(board,V,i,p,vk,flying); };
   const moveMsg=()=>`All pieces placed. Move along lines${vk==='nine'&&flying?' (or fly at 3)':''}.`;
   const nameOf=(p:P)=>p===1?p1Name:p2Name;
   const colorOf=(p:P)=>p===1?p1Color:p2Color;
+  const share=async()=>{
+    const url=stateToUrl({variant:vk,board,turn,phase,toPlace,mustRem,flying});
+    try{await navigator.clipboard.writeText(url);setMsg('Share link copied!');}
+    catch(e){setMsg('Copy failed');}
+  };
 
   const click=(idx:number)=>{
     if((cpu&&turn===-1)||winner!==0)return;
@@ -174,6 +229,7 @@ export default function Gameplay(){
         <div className="flex items-center gap-2">
           <button onClick={undo} title="Undo" className="text-sm px-3 py-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 dark:bg-zinc-700 dark:border-zinc-600 dark:hover:bg-zinc-600">↺</button>
           <button onClick={()=>reset(true)} title="Reset" className="text-sm px-3 py-1.5 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">🔄</button>
+          <button onClick={share} title="Share" className="text-sm px-3 py-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 dark:bg-zinc-700 dark:border-zinc-600 dark:hover:bg-zinc-600">Share</button>
           <button onClick={()=>setDark(d=>!d)} title="Toggle theme" className="text-sm px-3 py-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 dark:bg-zinc-700 dark:border-zinc-600 dark:hover:bg-zinc-600">{dark?"🌞":"🌙"}</button>
         </div>
       </header>
