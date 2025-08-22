@@ -84,42 +84,50 @@ jobs:
           git commit -m "PR #${PR_NUMBER}: screenshots for ${SHA}" || echo "No changes to commit"
           git push origin ci-artifacts
 
-      - name: Build PR comment body
+      - name: Build PR comment body (write comment.md)
         if: always()
-        id: build_comment
-        env:
-          PR_NUMBER: ${{ github.event.number }}
-          SHA: ${{ github.sha }}
-          REPO: ${{ github.repository }}
-          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          BRANCH_EXISTS=$(git ls-remote --heads origin ci-artifacts | wc -l | xargs)
-          BASE="https://raw.githubusercontent.com/${REPO}/ci-artifacts/.ci-screenshots/pr-${PR_NUMBER}/${SHA}"
-          FILES=$(find .ci-screenshots/pr-${PR_NUMBER}/${SHA} -type f -name '*.png' -printf "%f\n" 2>/dev/null | head -n 12)
-
+          set -euo pipefail
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          PR="${{ github.event.number }}"
+          SHA="${{ github.sha }}"
+          REPO="${{ github.repository }}"
+          BASE="https://raw.githubusercontent.com/${REPO}/ci-artifacts/.ci-screenshots/pr-${PR}/${SHA}"
+              
+          # Try to list up to 12 PNGs if the folder exists; don't fail if it doesn't
+          FILES=""
+          if [ -d ".ci-screenshots/pr-${PR}/${SHA}" ]; then
+            FILES=$(find ".ci-screenshots/pr-${PR}/${SHA}" -type f -name '*.png' -maxdepth 1 2>/dev/null | head -n 12)
+          fi
+              
           {
             echo "## 📸 Playwright Screenshots"
-            echo ""
-            if [ -n "$FILES" ] && [ "$BRANCH_EXISTS" != "0" ]; then
-              echo "_Top ${#FILES[@]} screenshots (max 12). Click to expand each._"
-              echo ""
-              # shellcheck disable=SC2086
-              for f in $FILES; do
-                echo "<details><summary>${f}</summary>"
-                echo ""
-                echo "![${f}](${BASE}/${f})"
-                echo ""
+            echo
+            if [ -n "$FILES" ]; then
+              echo "_Top screenshots (click to expand)_"
+              echo
+              # Show each file in a collapsible block
+              while IFS= read -r f; do
+                fname="$(basename "$f")"
+                echo "<details><summary>${fname}</summary>"
+                echo
+                echo "![${fname}](${BASE}/${fname})"
+                echo
                 echo "</details>"
-              done
-              echo ""
-              echo "> Full run and any remaining artifacts: ${RUN_URL}"
+              done <<< "$FILES"
+              echo
+              echo "> Full run & all artifacts: ${RUN_URL}"
             else
               echo "No screenshots embedded."
-              echo ""
+              echo
               echo "• If tests didn’t fail, Playwright may not have produced screenshots."
               echo "• See the run artifacts here: ${RUN_URL}"
             fi
           } > comment.md
+              
+          # Sanity logs to help debug path issues if this ever breaks again
+          echo "Created comment.md in: $(pwd)"
+          ls -la comment.md
 
       - name: Create or update PR comment
         if: always()
