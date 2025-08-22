@@ -5,6 +5,17 @@ import { inMill, collectMill, removables, canPlace, enterMoving, winnerAfterRemo
 
 const nt=(t:P)=>t===1?-1:1;
 
+export const cpuBestRemoval=(board:number[],phase:Phase,toPlace:{p1:number;p2:number},vk:K,flying:boolean):number|null=>{
+  const R=[...removables(board,-1,VARIANTS[vk].mills)];
+  if(!R.length) return null;
+  const hEval=(b:number[],p:P)=>{const o=-p as P;let s=0,pcP=0,pcO=0,twP=0,twO=0,millP=0,millO=0;
+    for(let i=0;i<b.length;i++){if(b[i]===p){pcP++;s+=VARIANTS[vk].adj[i].length;} else if(b[i]===o){pcO++;s-=VARIANTS[vk].adj[i].length;}}
+    for(const m of VARIANTS[vk].mills){const cntP=m.reduce((a,i)=>a+(b[i]===p?1:0),0),cntO=m.reduce((a,i)=>a+(b[i]===o?1:0),0);const emp=m.some(i=>b[i]===0);if(cntP===3)millP++;if(cntO===3)millO++;if(emp&&cntP===2)twP++;if(emp&&cntO===2)twO++;}
+    s+=(pcP-pcO)*120+(millP-millO)*90+(twP-twO)*30; if(phase==='moving'){const mob=(pl:P)=>{let c=0;for(let i=0;i<b.length;i++) if(b[i]===pl) c+=destinationsFor(b,VARIANTS[vk],i,pl,vk,flying).length; return c}; s+=(mob(p)-mob(o))*4;} if(vk==='nine'&&phase!=='placing'){if(pcO<=2)s+=8000;if(pcP<=2)s-=8000;} return s;};
+  let best=R[0],bestVal=-Infinity; for(const r of R){const b2=board.slice();b2[r]=0;const val=hEval(b2,-1 as P); if(val>bestVal){bestVal=val;best=r;}}
+  return best;
+};
+
 export const runTests=()=>{const V=VARIANTS.nine;const r: {name:string;pass:boolean}[]=[];let b:number[];
 b=Array(24).fill(0);b[0]=b[1]=b[2]=1;r.push({name:"mill h [0,1,2]",pass:inMill(b,1,1 as P,V.mills)});
 b=Array(24).fill(0);b[0]=b[1]=b[2]=-1;b[3]=-1;b[9]=1;const R=removables(b,1 as P,V.mills);r.push({name:"removable prefers non-mill",pass:R.has(3)&&!R.has(0)});
@@ -102,14 +113,8 @@ export default function Gameplay(){
     thinking.current=true;
     const t=setTimeout(()=>{
       if(mustRem===-1){
-        const R=[...removables(board,-1,VARIANTS[vk].mills)];
-        if(R.length){
-          let best=R[0],bestVal=-Infinity;
-          for(const r of R){
-            const b2=board.slice();b2[r]=0;
-            const val=hEval(b2,-1,phase,toPlace);
-            if(val>bestVal){bestVal=val;best=r;}
-          }
+        const best=cpuBestRemoval(board,phase,toPlace,vk,flying);
+        if(best!==null){
           doCPU({type:'remove',idx:best});
         }
       } else {

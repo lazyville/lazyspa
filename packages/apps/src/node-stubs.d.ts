@@ -9,6 +9,10 @@ declare module 'node:assert/strict' {
 }
 
 declare module 'react' {
+  export function useEffect(...args: any[]): void;
+  export function useMemo<T>(factory: () => T, deps: any[]): T;
+  export function useRef<T>(value: T): { current: T };
+  export function useState<T>(initial?: T | (() => T)): [T, (v: T | ((prev: T) => T)) => void];
   const React: any;
   export default React;
 }
