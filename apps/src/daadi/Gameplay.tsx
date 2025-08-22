@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { VARIANTS, K, P, Phase } from "./variants";
 import { inMill, collectMill, removables, canPlace, enterMoving, winnerAfterRemoval, destinationsFor, checkWin } from "./rules";
+import Logo from "./Logo";
 
 const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -159,7 +160,10 @@ export default function Gameplay(){
     <div className="min-h-screen w-full flex flex-col">
       <header className="w-full px-4 py-2 flex items-center justify-between bg-white/80 dark:bg-zinc-800/80 backdrop-blur shadow">
         <div className="flex items-center gap-2">
-          <span className="text-xl font-semibold" onClick={(e:any)=>{ if(e.detail===3){ const t = !dbg; setDbg(t); setMsg(`Debug mode: ${t ? 'ON' : 'OFF'} (triple‑click title to toggle)`);} }}>{Title}</span>
+          <div className="flex items-center gap-1 text-xl font-semibold" onClick={(e:any)=>{ if(e.detail===3){ const t = !dbg; setDbg(t); setMsg(`Debug mode: ${t ? 'ON' : 'OFF'} (triple‑click title to toggle)`);} }}>
+            <Logo className="w-5 h-5" />
+            {Title}
+          </div>
           {dbg && <span className="text-xs px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">Debug</span>}
         </div>
         <div className="hidden sm:flex items-center gap-4 text-sm">
