@@ -176,7 +176,7 @@ export default function Gameplay(){
         </div>
       </header>
 
-      <div className="flex-1 w-full flex flex-col md:flex-row items-start gap-6 p-4 md:p-6 lg:p-8">
+      <div className="flex-1 w-full flex flex-col md:flex-row items-start gap-6 p-4 md:p-6 lg:p-8 relative">
         <div className="flex-1 flex items-center justify-center relative">
           <div className={`w-full ${maxBoard?'max-w-full':'max-w-3xl'} aspect-square bg-white dark:bg-zinc-800 rounded-2xl shadow p-2 sm:p-4 md:p-6`}>
             <svg viewBox={`0 0 ${off*2+6*sx} ${off*2+6*sx}`} className="w-full h-full text-zinc-700 dark:text-zinc-300 touch-manipulation select-none">
@@ -196,7 +196,7 @@ export default function Gameplay(){
           )}
         </div>
 
-        <div className={`w-full md:w-80 flex flex-col gap-4 ${maxBoard?'hidden':''}`}>
+        <div className={`w-full md:w-80 flex flex-col gap-4 transition-transform duration-300 md:transform ${maxBoard? 'hidden md:block md:absolute md:right-0 md:translate-x-full' : 'md:translate-x-0'}`}>
           <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow p-4">
             <p className="text-sm leading-relaxed">{msg}</p>
             <div className="mt-3 flex flex-col gap-2 text-sm text-zinc-600 dark:text-zinc-400">
