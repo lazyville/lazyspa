@@ -66,25 +66,25 @@
         return thumbs[i];
       }
       function hash(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h<<5)-h + s.charCodeAt(i); h|=0; } return h; }
-      function card({ slug, latest, versions }){
+      function card({ slug, latest, versions, name, desc, thumb }){
         const a = document.createElement('a');
         a.className = 'card';
         a.href = latest || `./_games/${slug}/latest/`;
         const thumb = document.createElement('div');
         thumb.className = 'thumb';
         const img = document.createElement('img');
-        img.alt = slug;
+        img.alt = name || slug;
         img.loading = 'lazy';
-        img.src = pickThumb(slug);
+        img.src = thumb || pickThumb(slug);
         thumb.appendChild(img);
         const body = document.createElement('div');
         body.className = 'body';
         const h = document.createElement('h2');
         h.className = 'title';
-        h.textContent = titleFromSlug(slug);
+        h.textContent = name || titleFromSlug(slug);
         const p = document.createElement('p');
         p.className = 'desc';
-        p.textContent = 'Play in your browser';
+        p.textContent = desc || 'Play in your browser';
         const row = document.createElement('div');
         row.className = 'row';
         const latestLink = document.createElement('a');
@@ -149,8 +149,8 @@
           if(!res.ok) throw new Error('manifest fetch failed');
           const data = await res.json();
           let games = Array.isArray(data.games) ? data.games : [];
-          // Stable sort by slug for consistent ordering
-          games = games.slice().sort((a,b)=>String(a.slug).localeCompare(String(b.slug)));
+          // Stable sort by name (fallback to slug)
+          games = games.slice().sort((a,b)=>String(a.name||a.slug).localeCompare(String(b.name||b.slug)));
           meta.textContent = games.length + ' game' + (games.length===1?'':'s');
           if(games.length===0){ empty.hidden = false; return; }
           for(const g of games){ grid.appendChild(card(g)); }
