@@ -57,6 +57,15 @@
       function titleFromSlug(slug){
         return slug.replace(/[-_]/g,' ').replace(/\b\w/g, s => s.toUpperCase());
       }
+      function pickThumb(slug){
+        const thumbs = [
+          './assets/thumbs/abstract-1.svg',
+          './assets/thumbs/abstract-2.svg'
+        ];
+        const i = Math.abs(hash(slug)) % thumbs.length;
+        return thumbs[i];
+      }
+      function hash(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h<<5)-h + s.charCodeAt(i); h|=0; } return h; }
       function card({ slug, latest, versions }){
         const a = document.createElement('a');
         a.className = 'card';
@@ -66,7 +75,7 @@
         const img = document.createElement('img');
         img.alt = slug;
         img.loading = 'lazy';
-        img.src = './assets/logo-DCDVUE3s.svg';
+        img.src = pickThumb(slug);
         thumb.appendChild(img);
         const body = document.createElement('div');
         body.className = 'body';
@@ -101,18 +110,32 @@
 
           const list = document.createElement('div');
           list.className = 'history';
-          const max = Math.min(versions.length, 6);
+          // versions are already sorted by CI (most recent first); fallback sort by ts desc
+          const sorted = versions.slice().sort((a,b)=> (b.ts||0)-(a.ts||0));
+          const max = Math.min(sorted.length, 6);
           for (let i = 0; i < max; i++) {
-            const v = versions[i];
+            const v = sorted[i];
             const link = document.createElement('a');
             const id = (v && v.id) ? String(v.id) : '';
             const shortId = id.length > 7 ? id.slice(0,7) : id;
             link.href = (v && v.url) ? v.url : `./_games/${slug}/${id}/`;
-            link.textContent = shortId || 'version';
+            const label = v.date ? `${shortId} · ${new Date(v.date).toISOString().slice(0,10)}` : shortId || 'version';
+            link.textContent = label;
             link.title = id;
             list.appendChild(link);
           }
-          details.appendChild(list);
+          // view all link
+          const all = document.createElement('a');
+          all.className = 'desc';
+          all.style.marginTop = '4px';
+          // derive folder URL from latest or first version
+          const baseUrl = (latest && latest.replace(/latest\/?$/, '')) || (sorted[0] && sorted[0].url && sorted[0].url.replace(/[^/]+\/?$/, '')) || `./_games/${slug}/`;
+          all.href = baseUrl;
+          all.textContent = 'View all versions →';
+          const wrap = document.createElement('div');
+          wrap.appendChild(list);
+          wrap.appendChild(all);
+          details.appendChild(wrap);
           body.append(h, p, row, details);
         } else {
           body.append(h, p, row);
@@ -125,7 +148,9 @@
           const res = await fetch(manifestUrl, { cache: 'no-store' });
           if(!res.ok) throw new Error('manifest fetch failed');
           const data = await res.json();
-          const games = Array.isArray(data.games) ? data.games : [];
+          let games = Array.isArray(data.games) ? data.games : [];
+          // Stable sort by slug for consistent ordering
+          games = games.slice().sort((a,b)=>String(a.slug).localeCompare(String(b.slug)));
           meta.textContent = games.length + ' game' + (games.length===1?'':'s');
           if(games.length===0){ empty.hidden = false; return; }
           for(const g of games){ grid.appendChild(card(g)); }
