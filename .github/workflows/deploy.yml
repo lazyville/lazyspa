@@ -74,12 +74,28 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: gh-pages
+      - name: Checkout main metadata
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: __main
       - name: Derive version short SHA
         run: echo "VERSION_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
-      - name: Generate games.json (auto-discover)
+      - name: Generate games.json (auto-discover + metadata)
         run: |
           mkdir -p __gh_manifest
           slugs=$(ls -1d ${GAME_COLLECTION}/* 2>/dev/null | xargs -n1 basename | sort || true)
+          # Load metadata from TSV if present: slug\tname\tdesc\tthumb
+          declare -A NAME_MAP DESC_MAP THUMB_MAP
+          META_FILE="__main/games/meta.tsv"
+          if [ -f "$META_FILE" ]; then
+            while IFS=$'\t' read -r slug name desc thumb; do
+              [[ -z "$slug" || "$slug" =~ ^# ]] && continue
+              NAME_MAP[$slug]="$name"
+              DESC_MAP[$slug]="$desc"
+              THUMB_MAP[$slug]="$thumb"
+            done < "$META_FILE"
+          fi
           echo '{' > __gh_manifest/games.json
           echo '  "commit": "'${GITHUB_SHA}'",' >> __gh_manifest/games.json
           echo '  "versionShort": "'${VERSION_SHORT}'",' >> __gh_manifest/games.json
@@ -101,6 +117,13 @@ jobs:
             echo '    {' >> __gh_manifest/games.json
             echo '      "slug": "'${slug}'",' >> __gh_manifest/games.json
             echo '      "latest": "'${latest_url}'",' >> __gh_manifest/games.json
+            # metadata fields
+            name="${NAME_MAP[$slug]}"; desc="${DESC_MAP[$slug]}"; thumb="${THUMB_MAP[$slug]}"
+            # JSON-safe (basic) escape for backslashes and quotes
+            esc() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/\"/\\\"/g'; }
+            if [ -n "$name" ]; then echo '      "name": "'"$(esc "$name")"'",' >> __gh_manifest/games.json; fi
+            if [ -n "$desc" ]; then echo '      "desc": "'"$(esc "$desc")"'",' >> __gh_manifest/games.json; fi
+            if [ -n "$thumb" ]; then echo '      "thumb": "'"$(esc "$thumb")"'",' >> __gh_manifest/games.json; fi
             echo '      "versions": [' >> __gh_manifest/games.json
             vfirst=1
             for v in $versions; do
