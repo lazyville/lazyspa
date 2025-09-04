@@ -68,30 +68,45 @@ jobs:
     needs: deploy
     env:
       GAME_COLLECTION: _games
-      # Keep this in sync with deploy.strategy.matrix.game_slug
-      GAME_SLUGS: "daadi"
       SITE_BASE: /lazyspa
     steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
       - name: Derive version short SHA
         run: echo "VERSION_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
-      - name: Generate games.json
+      - name: Generate games.json (auto-discover)
         run: |
           mkdir -p __gh_manifest
-          {
-            echo '{'
-            echo '  "commit": "'${GITHUB_SHA}'",'
-            echo '  "versionShort": "'${VERSION_SHORT}'",'
-            echo '  "collection": "'${GAME_COLLECTION}'",'
-            echo '  "games": ['
-            first=1
-            for slug in ${GAME_SLUGS}; do
-              [ $first -eq 0 ] && echo ','
-              echo '    {"slug":"'${slug}'","latest":"'${SITE_BASE}'/'${GAME_COLLECTION}'/'${slug}'/latest/"}'
-              first=0
+          slugs=$(ls -1d ${GAME_COLLECTION}/* 2>/dev/null | xargs -n1 basename || true)
+          echo '{' > __gh_manifest/games.json
+          echo '  "commit": "'${GITHUB_SHA}'",' >> __gh_manifest/games.json
+          echo '  "versionShort": "'${VERSION_SHORT}'",' >> __gh_manifest/games.json
+          echo '  "collection": "'${GAME_COLLECTION}'",' >> __gh_manifest/games.json
+          echo '  "games": [' >> __gh_manifest/games.json
+          first=1
+          for slug in $slugs; do
+            latest_url="${SITE_BASE}/${GAME_COLLECTION}/${slug}/latest/"
+            # gather versions (exclude 'latest')
+            versions=$(ls -1d ${GAME_COLLECTION}/${slug}/* 2>/dev/null | xargs -n1 basename | grep -v '^latest$' || true)
+            [ $first -eq 0 ] && echo ',' >> __gh_manifest/games.json
+            echo '    {' >> __gh_manifest/games.json
+            echo '      "slug": "'${slug}'",' >> __gh_manifest/games.json
+            echo '      "latest": "'${latest_url}'",' >> __gh_manifest/games.json
+            echo '      "versions": [' >> __gh_manifest/games.json
+            vfirst=1
+            for v in $versions; do
+              [ $vfirst -eq 0 ] && echo ',' >> __gh_manifest/games.json
+              echo '        {"id":"'${v}'","url":"'${SITE_BASE}'/'${GAME_COLLECTION}'/'${slug}'/'${v}'/"}' >> __gh_manifest/games.json
+              vfirst=0
             done
-            echo '  ]'
-            echo '}'
-          } > __gh_manifest/games.json
+            echo '      ]' >> __gh_manifest/games.json
+            echo '    }' >> __gh_manifest/games.json
+            first=0
+          done
+          echo '  ]' >> __gh_manifest/games.json
+          echo '}' >> __gh_manifest/games.json
       - name: Publish games.json
         uses: peaceiris/actions-gh-pages@v3
         with:
