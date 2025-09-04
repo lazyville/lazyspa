@@ -23,9 +23,13 @@ jobs:
           cache-dependency-path: apps/package-lock.json
       - run: npm ci
       - run: npm test
-      - run: npm run build
+      - name: Build (to _posts/daadi)
+        run: npm run build
+        env:
+          BASE_PATH: /lazyspa/_posts/daadi/
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: apps/dist
+          destination_dir: _posts/daadi
