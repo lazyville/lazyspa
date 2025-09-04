@@ -66,6 +66,15 @@
         return thumbs[i];
       }
       function hash(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h<<5)-h + s.charCodeAt(i); h|=0; } return h; }
+      function resolveAsset(u){
+        if(!u) return u;
+        if(/^https?:\/\//.test(u)) return u;
+        if(u.startsWith('/')){
+          const siteRoot = location.pathname.replace(/\/index\.html?$/, '').replace(/\/?$/, '');
+          return siteRoot + u;
+        }
+        return u; // relative like ./assets/... stays relative
+      }
       function card({ slug, latest, versions, name, desc, thumb: thumbUrl }){
         const a = document.createElement('a');
         a.className = 'card';
@@ -75,7 +84,7 @@
         const img = document.createElement('img');
         img.alt = name || slug;
         img.loading = 'lazy';
-        img.src = thumbUrl || pickThumb(slug);
+        img.src = resolveAsset(thumbUrl) || pickThumb(slug);
         thumbEl.appendChild(img);
         const body = document.createElement('div');
         body.className = 'body';
