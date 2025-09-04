@@ -1,17 +1,19 @@
 {
-  "commit": "af53721c7e031bec5080bea7b13a70b4ff2c5830",
-  "versionShort": "af53721",
+  "commit": "95d8a0902ea706c98868fbd9482e47657c001d96",
+  "versionShort": "95d8a09",
   "collection": "_games",
   "games": [
     {
       "slug": "daadi",
       "latest": "/lazyspa/_games/daadi/latest/",
       "versions": [
-        {"id":"5eadb15","url":"/lazyspa/_games/daadi/5eadb15/"}
+        {"id":"e792a7a","url":"/lazyspa/_games/daadi/e792a7a/","ts":1756973457,"date":"2025-09-04T08:10:57Z"}
 ,
-        {"id":"af53721","url":"/lazyspa/_games/daadi/af53721/"}
+        {"id":"af53721","url":"/lazyspa/_games/daadi/af53721/","ts":1756973457,"date":"2025-09-04T08:10:57Z"}
 ,
-        {"id":"e792a7a","url":"/lazyspa/_games/daadi/e792a7a/"}
+        {"id":"95d8a09","url":"/lazyspa/_games/daadi/95d8a09/","ts":1756973457,"date":"2025-09-04T08:10:57Z"}
+,
+        {"id":"5eadb15","url":"/lazyspa/_games/daadi/5eadb15/","ts":1756973457,"date":"2025-09-04T08:10:57Z"}
       ]
     }
   ]
