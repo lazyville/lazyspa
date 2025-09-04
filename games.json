@@ -1,8 +1,18 @@
 {
-  "commit": "e792a7a6b1112aa1da61a307c63a3d6bff96ff00",
-  "versionShort": "e792a7a",
+  "commit": "af53721c7e031bec5080bea7b13a70b4ff2c5830",
+  "versionShort": "af53721",
   "collection": "_games",
   "games": [
-    {"slug":"daadi","latest":"/lazyspa/_games/daadi/latest/"}
+    {
+      "slug": "daadi",
+      "latest": "/lazyspa/_games/daadi/latest/",
+      "versions": [
+        {"id":"5eadb15","url":"/lazyspa/_games/daadi/5eadb15/"}
+,
+        {"id":"af53721","url":"/lazyspa/_games/daadi/af53721/"}
+,
+        {"id":"e792a7a","url":"/lazyspa/_games/daadi/e792a7a/"}
+      ]
+    }
   ]
 }
