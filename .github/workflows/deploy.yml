@@ -9,11 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    env:
-      GAME_COLLECTION: _games
-      GAME_SLUG: daadi
     defaults:
       run:
         working-directory: apps
@@ -26,26 +23,53 @@ jobs:
           cache-dependency-path: apps/package-lock.json
       - run: npm ci
       - run: npm test
-      - name: Derive version short SHA
-        run: echo "VERSION_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
       - name: Build (relative base)
         run: npm run build
         env:
           BASE_PATH: ./
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: apps/dist
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        game_slug: ["daadi"] # add more slugs here
+    env:
+      GAME_COLLECTION: _games
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: apps/dist
+      - name: Derive version short SHA
+        run: echo "VERSION_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
       - name: Deploy versioned
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: apps/dist
-          destination_dir: ${{ env.GAME_COLLECTION }}/${{ env.GAME_SLUG }}/${{ env.VERSION_SHORT }}
+          destination_dir: ${{ env.GAME_COLLECTION }}/${{ matrix.game_slug }}/${{ env.VERSION_SHORT }}
           keep_files: true
       - name: Deploy latest alias
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: apps/dist
-          destination_dir: ${{ env.GAME_COLLECTION }}/${{ env.GAME_SLUG }}/latest
+          destination_dir: ${{ env.GAME_COLLECTION }}/${{ matrix.game_slug }}/latest
           keep_files: true
+
+  publish-index:
+    runs-on: ubuntu-latest
+    needs: deploy
+    env:
+      GAME_COLLECTION: _games
+      GAME_SLUGS: "daadi" # space-separated list; keep in sync with matrix
+    steps:
       - name: Generate root index
         run: |
           mkdir -p __ghpages_root
@@ -69,9 +93,11 @@ jobs:
             <body>
               <h1>Games</h1>
               <ul>
-                <li><a href="./${{ env.GAME_COLLECTION }}/${{ env.GAME_SLUG }}/latest/">${{ env.GAME_SLUG }}</a></li>
+          HTML
+          for slug in $GAME_SLUGS; do echo "                <li><a href=\"./$GAME_COLLECTION/$slug/latest/\">$slug</a></li>" >> __ghpages_root/index.html; done
+          cat >> __ghpages_root/index.html <<'HTML'
               </ul>
-              <div class="muted">Add more games via CI by setting <code>GAME_SLUG</code> or a matrix.</div>
+              <div class="muted">Add more games by updating the workflow's matrix.</div>
             </body>
           </html>
           HTML
@@ -79,5 +105,5 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: apps/__ghpages_root
+          publish_dir: __ghpages_root
           keep_files: true
