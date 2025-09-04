@@ -19,9 +19,11 @@
       .card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.08); border-color: color-mix(in oklab, CanvasText 18%, transparent); }
       .thumb { aspect-ratio: 16/9; background: color-mix(in oklab, CanvasText 6%, transparent); display: grid; place-items: center; }
       .thumb img { max-width: 70%; max-height: 70%; filter: drop-shadow(0 6px 10px rgba(0,0,0,.18)); }
-      .body { padding: 14px 14px 16px; }
+      .body { padding: 14px 14px 16px; display:flex; flex-direction:column; gap:8px; }
       .title { font-size: 16px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; }
       .desc { margin: 0; color: GrayText; font-size: 13px; }
+      .row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+      .chip { display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:999px; border:1px solid color-mix(in oklab, CanvasText 14%, transparent); background: color-mix(in oklab, Canvas 92%, transparent); font-size:12px; text-decoration:none; color:inherit; }
       .empty { padding: 24px; border: 1px dashed color-mix(in oklab, CanvasText 18%, transparent); border-radius: 12px; background: color-mix(in oklab, Canvas 94%, transparent); }
       footer { margin-top: 28px; color: GrayText; font-size: 13px; }
       .badge { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; border:1px solid color-mix(in oklab, CanvasText 14%, transparent); background: color-mix(in oklab, Canvas 92%, transparent); font-size:12px; }
@@ -48,7 +50,7 @@
       function titleFromSlug(slug){
         return slug.replace(/[-_]/g,' ').replace(/\b\w/g, s => s.toUpperCase());
       }
-      function card({ slug, latest }){
+      function card({ slug, latest, versions }){
         const a = document.createElement('a');
         a.className = 'card';
         a.href = latest || `./_games/${slug}/latest/`;
@@ -67,7 +69,18 @@
         const p = document.createElement('p');
         p.className = 'desc';
         p.textContent = 'Play in your browser';
-        body.append(h, p);
+        const row = document.createElement('div');
+        row.className = 'row';
+        const latestLink = document.createElement('a');
+        latestLink.className = 'chip';
+        latestLink.href = a.href;
+        latestLink.textContent = 'Latest';
+        const vcount = Array.isArray(versions) ? versions.length : 0;
+        const meta = document.createElement('span');
+        meta.className = 'desc';
+        meta.textContent = vcount ? (vcount + ' versions') : '';
+        row.append(meta, latestLink);
+        body.append(h, p, row);
         a.append(thumb, body);
         return a;
       }
@@ -91,4 +104,3 @@
     </script>
   </body>
   </html>
-
