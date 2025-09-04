@@ -79,7 +79,7 @@ jobs:
       - name: Generate games.json (auto-discover)
         run: |
           mkdir -p __gh_manifest
-          slugs=$(ls -1d ${GAME_COLLECTION}/* 2>/dev/null | xargs -n1 basename || true)
+          slugs=$(ls -1d ${GAME_COLLECTION}/* 2>/dev/null | xargs -n1 basename | sort || true)
           echo '{' > __gh_manifest/games.json
           echo '  "commit": "'${GITHUB_SHA}'",' >> __gh_manifest/games.json
           echo '  "versionShort": "'${VERSION_SHORT}'",' >> __gh_manifest/games.json
@@ -88,8 +88,15 @@ jobs:
           first=1
           for slug in $slugs; do
             latest_url="${SITE_BASE}/${GAME_COLLECTION}/${slug}/latest/"
-            # gather versions (exclude 'latest')
-            versions=$(ls -1d ${GAME_COLLECTION}/${slug}/* 2>/dev/null | xargs -n1 basename | grep -v '^latest$' || true)
+            # gather versions (exclude 'latest'), and sort by commit time desc
+            tmpfile=$(mktemp)
+            for v in $(ls -1 ${GAME_COLLECTION}/${slug} 2>/dev/null | grep -v '^latest$' || true); do
+              ts=$(git log -1 --format=%ct -- "${GAME_COLLECTION}/${slug}/${v}" 2>/dev/null || echo '')
+              if [ -z "$ts" ]; then ts=$(date +%s); fi
+              echo "$ts $v" >> "$tmpfile"
+            done
+            versions=$(sort -rn "$tmpfile" | awk '{print $2}')
+            rm -f "$tmpfile"
             [ $first -eq 0 ] && echo ',' >> __gh_manifest/games.json
             echo '    {' >> __gh_manifest/games.json
             echo '      "slug": "'${slug}'",' >> __gh_manifest/games.json
@@ -97,8 +104,11 @@ jobs:
             echo '      "versions": [' >> __gh_manifest/games.json
             vfirst=1
             for v in $versions; do
+              ts=$(git log -1 --format=%ct -- "${GAME_COLLECTION}/${slug}/${v}" 2>/dev/null || echo '')
+              if [ -z "$ts" ]; then ts=$(date +%s); fi
+              iso=$(date -u -d @${ts} +%FT%TZ 2>/dev/null || date -u -r ${ts} +%FT%TZ)
               [ $vfirst -eq 0 ] && echo ',' >> __gh_manifest/games.json
-              echo '        {"id":"'${v}'","url":"'${SITE_BASE}'/'${GAME_COLLECTION}'/'${slug}'/'${v}'/"}' >> __gh_manifest/games.json
+              echo '        {"id":"'${v}'","url":"'${SITE_BASE}'/'${GAME_COLLECTION}'/'${slug}'/'${v}'/","ts":'${ts}',"date":"'${iso}'"}' >> __gh_manifest/games.json
               vfirst=0
             done
             echo '      ]' >> __gh_manifest/games.json
