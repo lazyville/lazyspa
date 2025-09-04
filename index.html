@@ -1,24 +1,94 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>LazySPA • Games</title>
+    <meta name="color-scheme" content="light dark" />
     <style>
-      body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica Neue,Arial;line-height:1.5;margin:40px}
-      h1{margin-bottom:16px;font-size:24px}
-      ul{padding-left:20px}
-      a{color:#2563eb;text-decoration:none}
-      a:hover{text-decoration:underline}
-      .muted{color:#6b7280;font-size:14px;margin-top:8px}
-      code{background:#f1f5f9;padding:2px 4px;border-radius:4px}
+      :root { color-scheme: light dark; }
+      html, body { height: 100%; }
+      body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial; background: Canvas; color: CanvasText; }
+      .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 20px 48px; }
+      header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+      h1 { font-size: 28px; margin: 0; letter-spacing: -0.02em; }
+      .sub { color: GrayText; font-size: 14px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+      .card { display: block; border: 1px solid color-mix(in oklab, CanvasText 12%, transparent); border-radius: 12px; overflow: hidden; text-decoration: none; color: inherit; background: color-mix(in oklab, Canvas 94%, transparent); box-shadow: 0 1px 0 rgba(0,0,0,.03);
+        transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease; }
+      .card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.08); border-color: color-mix(in oklab, CanvasText 18%, transparent); }
+      .thumb { aspect-ratio: 16/9; background: color-mix(in oklab, CanvasText 6%, transparent); display: grid; place-items: center; }
+      .thumb img { max-width: 70%; max-height: 70%; filter: drop-shadow(0 6px 10px rgba(0,0,0,.18)); }
+      .body { padding: 14px 14px 16px; }
+      .title { font-size: 16px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; }
+      .desc { margin: 0; color: GrayText; font-size: 13px; }
+      .empty { padding: 24px; border: 1px dashed color-mix(in oklab, CanvasText 18%, transparent); border-radius: 12px; background: color-mix(in oklab, Canvas 94%, transparent); }
+      footer { margin-top: 28px; color: GrayText; font-size: 13px; }
+      .badge { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; border:1px solid color-mix(in oklab, CanvasText 14%, transparent); background: color-mix(in oklab, Canvas 92%, transparent); font-size:12px; }
     </style>
   </head>
   <body>
-    <h1>Games</h1>
-    <ul>
-                <li><a href="./_games/daadi/latest/">daadi</a></li>
-    </ul>
-    <div class="muted">Add more games by updating the workflow's matrix.</div>
+    <div class="wrap">
+      <header>
+        <h1>LazySPA</h1>
+        <span class="sub" id="meta"></span>
+      </header>
+      <div id="grid" class="grid" aria-live="polite"></div>
+      <div id="empty" class="empty" hidden>No games found yet.</div>
+      <footer>
+        <span class="badge">Project Pages</span>
+      </footer>
+    </div>
+    <script>
+      const meta = document.getElementById('meta');
+      const grid = document.getElementById('grid');
+      const empty = document.getElementById('empty');
+      const manifestUrl = new URL('./games.json', location.href).toString();
+
+      function titleFromSlug(slug){
+        return slug.replace(/[-_]/g,' ').replace(/\b\w/g, s => s.toUpperCase());
+      }
+      function card({ slug, latest }){
+        const a = document.createElement('a');
+        a.className = 'card';
+        a.href = latest || `./_games/${slug}/latest/`;
+        const thumb = document.createElement('div');
+        thumb.className = 'thumb';
+        const img = document.createElement('img');
+        img.alt = slug;
+        img.loading = 'lazy';
+        img.src = './assets/logo-DCDVUE3s.svg';
+        thumb.appendChild(img);
+        const body = document.createElement('div');
+        body.className = 'body';
+        const h = document.createElement('h2');
+        h.className = 'title';
+        h.textContent = titleFromSlug(slug);
+        const p = document.createElement('p');
+        p.className = 'desc';
+        p.textContent = 'Play in your browser';
+        body.append(h, p);
+        a.append(thumb, body);
+        return a;
+      }
+      async function load(){
+        try{
+          const res = await fetch(manifestUrl, { cache: 'no-store' });
+          if(!res.ok) throw new Error('manifest fetch failed');
+          const data = await res.json();
+          const games = Array.isArray(data.games) ? data.games : [];
+          meta.textContent = games.length + ' game' + (games.length===1?'':'s');
+          if(games.length===0){ empty.hidden = false; return; }
+          for(const g of games){ grid.appendChild(card(g)); }
+        }catch(err){
+          // Fallback: show known slug(s) if manifest is missing
+          meta.textContent = 'fallback mode';
+          const fallback = [{ slug: 'daadi' }];
+          for(const g of fallback){ grid.appendChild(card(g)); }
+        }
+      }
+      load();
+    </script>
   </body>
-</html>
+  </html>
+
