@@ -1,19 +1,24 @@
 {
-  "commit": "95d8a0902ea706c98868fbd9482e47657c001d96",
-  "versionShort": "95d8a09",
+  "commit": "e553939757c0bb72ebbdf9944bd0b5d3e8cd3fb2",
+  "versionShort": "e553939",
   "collection": "_games",
   "games": [
     {
       "slug": "daadi",
       "latest": "/lazyspa/_games/daadi/latest/",
+      "name": "Daadi • Navakankari",
+      "desc": "Nine Men's Morris with a modern UI.",
+      "thumb": "/assets/thumbs/abstract-1.svg",
       "versions": [
-        {"id":"e792a7a","url":"/lazyspa/_games/daadi/e792a7a/","ts":1756973457,"date":"2025-09-04T08:10:57Z"}
+        {"id":"e792a7a","url":"/lazyspa/_games/daadi/e792a7a/","ts":1756973822,"date":"2025-09-04T08:17:02Z"}
 ,
-        {"id":"af53721","url":"/lazyspa/_games/daadi/af53721/","ts":1756973457,"date":"2025-09-04T08:10:57Z"}
+        {"id":"e553939","url":"/lazyspa/_games/daadi/e553939/","ts":1756973822,"date":"2025-09-04T08:17:02Z"}
 ,
-        {"id":"95d8a09","url":"/lazyspa/_games/daadi/95d8a09/","ts":1756973457,"date":"2025-09-04T08:10:57Z"}
+        {"id":"af53721","url":"/lazyspa/_games/daadi/af53721/","ts":1756973822,"date":"2025-09-04T08:17:02Z"}
 ,
-        {"id":"5eadb15","url":"/lazyspa/_games/daadi/5eadb15/","ts":1756973457,"date":"2025-09-04T08:10:57Z"}
+        {"id":"95d8a09","url":"/lazyspa/_games/daadi/95d8a09/","ts":1756973822,"date":"2025-09-04T08:17:02Z"}
+,
+        {"id":"5eadb15","url":"/lazyspa/_games/daadi/5eadb15/","ts":1756973822,"date":"2025-09-04T08:17:02Z"}
       ]
     }
   ]
