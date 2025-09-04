@@ -11,6 +11,8 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      GAME_SLUG: daadi
     defaults:
       run:
         working-directory: apps
@@ -23,13 +25,13 @@ jobs:
           cache-dependency-path: apps/package-lock.json
       - run: npm ci
       - run: npm test
-      - name: Build (to _posts/daadi)
+      - name: Build (to _posts/${{ env.GAME_SLUG }})
         run: npm run build
         env:
-          BASE_PATH: /lazyspa/_posts/daadi/
+          BASE_PATH: /lazyspa/_posts/${{ env.GAME_SLUG }}/
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: apps/dist
-          destination_dir: _posts/daadi
+          destination_dir: _posts/${{ env.GAME_SLUG }}
